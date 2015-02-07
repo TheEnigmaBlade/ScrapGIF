@@ -3,28 +3,16 @@ package net.enigmablade.gif;
 import java.io.*;
 import java.util.*;
 import com.alee.log.*;
+import net.enigmablade.gif.util.*;
 import net.enigmablade.jsonic.*;
 
 public class SettingsLoader
 {
 	private static final String SETTINGS_FOLDER = "settings/";
 	
-	public static File[] getLibraries()
-	{
-		File libraryDir = getFile("libraries");
-		if(!libraryDir.exists() || !libraryDir.isDirectory())
-			return new File[0];
-		return libraryDir.listFiles((File dir, String name) -> name.endsWith(".json"));
-	}
-	
-	public static boolean saveLibrary(String name, JsonElement json)
-	{
-		return saveJson("libraries/"+name, json);
-	}
-	
 	public static Properties getServiceSettings(String name)
 	{
-		return getProperties("services/"+name);
+		return getConfig("services/"+name);
 	}
 	
 	public static JsonObject getJson(String name)
@@ -50,24 +38,13 @@ public class SettingsLoader
 	public static boolean saveJson(String name, JsonElement json)
 	{
 		File file = setupWrite(name+".json");
-		String jsonStr = json.getJSON();
-		try(PrintStream out = new PrintStream(file))
-		{
-			out.print(jsonStr);
-			out.flush();
-			return true;
-		}
-		catch(IOException e)
-		{
-			Log.error("Failed to write to file", e);
-			return false;
-		}
+		return IOUtil.writeFile(file, json.getJSON());
 	}
 	
-	public static Properties getProperties(String name)
+	public static Config getConfig(String name)
 	{
 		File file = getFile(name+".properties");
-		Properties p = new Properties();
+		Config p = new Config(name);
 		
 		if(!file.exists())
 		{
@@ -108,20 +85,6 @@ public class SettingsLoader
 	
 	public static File setupWrite(String name)
 	{
-		File file = getFile(name);
-		if(!file.exists())
-		{
-			file.getParentFile().mkdirs();
-			try
-			{
-				file.createNewFile();
-			}
-			catch(IOException e)
-			{
-				Log.error("Failed to create file", e);
-				return null;
-			}
-		}
-		return file;
+		return IOUtil.setupWrite(getFile(name));
 	}
 }

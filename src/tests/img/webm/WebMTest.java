@@ -1,22 +1,19 @@
-package net.enigmablade.gif.services.imgur;
+package tests.img.webm;
 
-import java.io.*;
 import com.alee.log.*;
+import net.enigmablade.gif.img.*;
+import net.enigmablade.gif.img.webm.*;
 
-public class ImgurTest
+public class WebMTest
 {
 	public static void main(String[] args)
 	{
 		initLog();
 		
-		ImgurUploadTask uploader = new ImgurUploadTask(new File("C:\\Users\\EnigmaBlade\\Pictures\\Anime\\Kemonomimi\\vNOoACI.jpg")) {
-			@Override
-			protected void done(String result)
-			{
-				System.out.println("http://i.imgur.com/"+result);
-			}
-		};
-		uploader.execute();
+		String path = "C:\\Users\\EnigmaBlade\\Desktop\\gay_bulge.webm";
+		WebMLoader loader = new WebMLoader(path);
+		ImageFrame[] frames = loader.readFull();
+		System.out.println("Num read frames: "+frames.length);
 	}
 	
 	private static void initLog()

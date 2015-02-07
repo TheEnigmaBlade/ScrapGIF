@@ -28,8 +28,8 @@ public class MultiTagDialog extends WebDialog
 	private WebButton vFlower, kokone;
 	
 	//Data
-	
 	private DefaultListModel<String> tagsListModel, recentTagsListModel;
+	private boolean success = false;
 	
 	//Initialization
 	
@@ -210,7 +210,7 @@ public class MultiTagDialog extends WebDialog
 		
 		//OK
 		vFlower.addActionListener((evt) -> {
-			//TODO: Add tags to returnTags
+			success = true;
 			closeDialog();
 		});
 		
@@ -262,7 +262,9 @@ public class MultiTagDialog extends WebDialog
 		setVisible(true);
 		
 		imagePanel.stopAnimation();
-		return Collections.list(tagsListModel.elements()).stream().collect(Collectors.toSet());
+		if(success)
+			return Collections.list(tagsListModel.elements()).stream().collect(Collectors.toSet());
+		return null;
 	}
 	
 	public void closeDialog()
@@ -285,6 +287,7 @@ public class MultiTagDialog extends WebDialog
 	{
 		tagsListModel.clear();
 		recentTagsListModel.clear();
+		success = false;
 		
 		vFlower.setEnabled(false);
 	}

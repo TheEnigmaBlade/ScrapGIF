@@ -16,25 +16,31 @@ public interface UIController
 	
 	public void uploadImage(ImageData image);
 	
+	public void openFileSystem(ImageData image);
+	
 	//Tagging
 	
 	public void tagImage(ImageData data);
 	
+	public void starImage(ImageData data);
+	
 	//Searching
 	
-	public void addToSearchQuery(String newQuery, boolean onEnd);
+	public void setSearchFavorites(String currentQuery, boolean onlyFavs);
 	
-	public void removedFromSearchQuery(String newQuery, boolean onEnd);
+	public void addToSearchQuery(String newQuery, boolean onEnd, boolean onlyFavs);
+	
+	public void removedFromSearchQuery(String newQuery, boolean onEnd, boolean onlyFavs);
 	
 	//Menu bar
 	
 	public void createLibrary(File dir, String name);
-
+	
 	//Other
 	
 	public void close();
-
+	
 	public void addFilesFromDrag(List<File> files);
-
+	
 	public void addUrlFromDrag(URL url);
 }

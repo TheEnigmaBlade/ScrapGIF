@@ -1,18 +1,34 @@
 package net.enigmablade.gif.services;
 
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.*;
 import javax.swing.*;
 import com.alee.log.*;
+import net.enigmablade.gif.util.*;
 
-public abstract class ServiceUploadTask extends SwingWorker<String, Void>
+public abstract class ServiceUploadTask extends SwingWorker<String, Integer>
 {
 	protected File file;
+	private long fileSize;	// In KB
+	
+	protected ServiceError error = ServiceError.NONE;
 	
 	public ServiceUploadTask(File file)
 	{
 		this.file = file;
+		try
+		{
+			fileSize = Files.size(file.toPath());
+			Log.info("Image size: %d bytes (%.2f MB)", fileSize, IOUtil.bytesToMegabytes(fileSize));
+		}
+		catch(IOException e)
+		{
+			Log.error("Failed to get upload file size: "+file.getPath(), e);
+			fileSize = -1;
+		}
 	}
 	
 	@Override
@@ -30,19 +46,34 @@ public abstract class ServiceUploadTask extends SwingWorker<String, Void>
 		done(result);
 	}
 	
+	@Override
+	protected void process(List<Integer> chunks)
+	{
+		for(int i : chunks)
+			progressed(i);
+	}
+	
 	protected abstract void done(String result);
 	
-	//Helpers
+	protected abstract void progressed(int value);
 	
-	protected static int copy(InputStream in, OutputStream out) throws IOException
+	// Helpers
+	
+	protected long copy(InputStream in, OutputStream out, Consumer<Integer> cb) throws IOException
 	{
-		byte[] buffer = new byte[8192];
-		int count = 0;
+		int lastVal = -1;
+		
+		byte[] buffer = new byte[4096];
+		long count = 0;
 		int n = 0;
 		while(-1 != (n = in.read(buffer)))
 		{
 			out.write(buffer, 0, n);
 			count += n;
+			
+			int val = (int)(100.0*count/fileSize);
+			if(val > lastVal)
+				cb.accept(lastVal = val);
 		}
 		return count;
 	}

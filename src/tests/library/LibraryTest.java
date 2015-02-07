@@ -1,7 +1,8 @@
-package net.enigmablade.gif.library;
+package tests.library;
 
 import java.util.*;
 import com.alee.log.*;
+import net.enigmablade.gif.library.*;
 
 public class LibraryTest
 {

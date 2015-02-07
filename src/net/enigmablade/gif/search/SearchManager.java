@@ -32,7 +32,7 @@ public class SearchManager
 		states.push(initialState);
 	}
 	
-	public List<ImageData> addToQuery(String newQuery, boolean addedToEnd)
+	public List<ImageData> addToQuery(String newQuery, boolean addedToEnd, boolean onlyFavs)
 	{
 		Objects.requireNonNull(newQuery, "You need to have a query");
 		//if(newQuery.length() == 0 || newQuery.length() <= query.length())
@@ -52,12 +52,15 @@ public class SearchManager
 		}
 		
 		List<SearchItem> newState = initialState;
-		for(int n = 0; n < diff.length(); n++)
+		for(int n = 0; n < diff.length() || (n == 0 && onlyFavs); n++)
 		{
-			query += diff.charAt(n);
-			System.out.println("New query: "+query);
-			queryParts = splitString(query);
-			System.out.println("Query parts: "+queryParts.toString());
+			if(diff.length() > 0)
+			{
+				query += diff.charAt(n);
+				System.out.println("New query: "+query);
+				queryParts = splitString(query);
+				System.out.println("Query parts: "+queryParts.toString());
+			}
 			
 			List<SearchItem> currentState = states.peek();
 			
@@ -65,6 +68,9 @@ public class SearchManager
 			newState = new LinkedList<>();
 			items: for(SearchItem item : currentState)
 			{
+				if(onlyFavs && !item.getData().isStarred())
+					continue items;
+				
 				for(String queryPart : queryParts)
 				{
 					if(!item.query(queryPart))
@@ -79,7 +85,7 @@ public class SearchManager
 		return getImageData(newState);
 	}
 	
-	public List<ImageData> removeFromQuery(String newQuery, boolean removedFromEnd)
+	public List<ImageData> removeFromQuery(String newQuery, boolean removedFromEnd, boolean onlyFavs)
 	{
 		Objects.requireNonNull(query, "You need to have a query");
 		//if(newQuery.length() == 0 || newQuery.length() >= query.length())
@@ -106,7 +112,7 @@ public class SearchManager
 			return getImageData(newState);
 		}
 		
-		return addToQuery(newQuery, false);
+		return addToQuery(newQuery, false, onlyFavs);
 	}
 	
 	private static Set<String> splitString(String str)

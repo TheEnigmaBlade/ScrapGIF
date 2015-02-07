@@ -6,6 +6,7 @@ import com.alee.log.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.library.*;
 import net.enigmablade.gif.services.imgur.*;
+import net.enigmablade.gif.util.*;
 
 public abstract class ServiceManager
 {
@@ -27,18 +28,18 @@ public abstract class ServiceManager
 	
 	//Manager stuff
 	
-	public void upload(Library library, ImageData image, BiConsumer<ImageData, ServiceLink> callback)
+	public void upload(Library library, ImageData image, TriConsumer<ServiceError, ImageData, ServiceLink> doneCallback, Consumer<Integer> progressCallback)
 	{
 		Log.info("Uploading image");
 		File imageFile = new File(library.getImagePath(image.getPath()));
 		if(imageFile.exists() && imageFile.isFile())
 		{
 			ServiceManager manager = getInstance(null, image.getPath());
-			manager.upload(imageFile, image, callback);
+			manager.upload(imageFile, image, doneCallback, progressCallback);
 		}
 	}
 	
-	public abstract void upload(File file, ImageData image, BiConsumer<ImageData, ServiceLink> callback);
+	public abstract void upload(File file, ImageData image, TriConsumer<ServiceError, ImageData, ServiceLink> doneCallback, Consumer<Integer> progressCallback);
 	
 	public abstract String createUrl(String id);
 }

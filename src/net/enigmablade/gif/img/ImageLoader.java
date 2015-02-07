@@ -3,8 +3,9 @@ package net.enigmablade.gif.img;
 import java.awt.image.*;
 import java.io.*;
 import javax.imageio.*;
-import org.imgscalr.*;
 import com.alee.log.*;
+import com.mortennobel.imagescaling.*;
+import net.enigmablade.gif.*;
 import net.enigmablade.gif.img.gif.*;
 import net.enigmablade.gif.library.*;
 
@@ -58,7 +59,6 @@ public abstract class ImageLoader
 	//Thumbnails
 	
 	private static final String THUMBNAIL_PATH = "cache/thumbnails/";
-	private static final int THUMBNAIL_MAX_SIZE = 200;
 	
 	public static BufferedImage getThumbnail(Library library, String imageId, String imagePath)
 	{
@@ -110,6 +110,8 @@ public abstract class ImageLoader
 	
 	public static BufferedImage scale(BufferedImage image)
 	{
-		return Scalr.resize(image, Scalr.Mode.FIT_TO_HEIGHT, THUMBNAIL_MAX_SIZE);
+		ThumpnailRescaleOp op = new ThumpnailRescaleOp(DimensionConstrain.createMaxDimension(Integer.MAX_VALUE, GifConstants.THUMBNAIL_SIZE_NORMAL));
+		return op.filter(image, null);
+		//return Scalr.resize(image, Scalr.Mode.FIT_TO_HEIGHT, GifConstants.THUMBNAIL_SIZE_NORMAL);
 	}
 }

@@ -31,14 +31,14 @@ public abstract class ImgurUploadTask extends ServiceUploadTask
 			
 			try(OutputStream out = conn.getOutputStream())
 			{
-				copy(in, out);
+				copy(in, out, p -> publish(p));
 				out.flush();
 			}
 			
 			Log.info("Response = "+conn.getResponseCode());
 			
-			System.out.println("Client credits: "+conn.getHeaderField("X-RateLimit-ClientRemaining")+"/"+conn.getHeaderField("X-RateLimit-ClientLimit"));
-			System.out.println("User credits: "+conn.getHeaderField("X-RateLimit-UserRemaining")+"/"+conn.getHeaderField("X-RateLimit-UserLimit"));
+			Log.info("Ingur client credits: "+conn.getHeaderField("X-RateLimit-ClientRemaining")+"/"+conn.getHeaderField("X-RateLimit-ClientLimit"));
+			Log.info("Imgur user credits:   "+conn.getHeaderField("X-RateLimit-UserRemaining")+"/"+conn.getHeaderField("X-RateLimit-UserLimit"));
 			
 			//Success
 			if(conn.getResponseCode() == HttpURLConnection.HTTP_OK)
@@ -53,20 +53,23 @@ public abstract class ImgurUploadTask extends ServiceUploadTask
 			//Failure
 			else
 			{
-				Log.error("ERROR");
+				Log.error("FAILURE");
 				String msg = readStream(conn.getErrorStream());
 				Log.error("Response: "+msg);
+				error = ServiceError.SERVER;
 				return null;
 			}
 		}
 		catch(IOException e)
 		{
 			Log.error("Connection error during upload", e);
+			error = ServiceError.CONNECTION;
 			return null;
 		}
 		catch(Exception e)
 		{
 			Log.error("Unexpected error during upload", e);
+			error = ServiceError.UNEXPECTED;
 			return null;
 		}
 		finally

@@ -9,6 +9,7 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.*;
+import java.util.stream.*;
 import javax.swing.*;
 import com.alee.log.*;
 import net.enigmablade.gif.img.*;
@@ -16,10 +17,11 @@ import net.enigmablade.gif.library.*;
 import net.enigmablade.gif.search.*;
 import net.enigmablade.gif.services.*;
 import net.enigmablade.gif.ui.*;
+import net.enigmablade.gif.util.*;
 
 public class GifOrganizer implements UIController
 {
-	private Properties config;
+	private Config config;
 	
 	private GifOrganizerUI view;
 	private ImageCache imageCache;
@@ -42,36 +44,31 @@ public class GifOrganizer implements UIController
 	
 	public void initSettings()
 	{
-		config = SettingsLoader.getProperties("config");
+		config = SettingsLoader.getConfig("config");
 		
 		//Image cache
 		imageCache = new ImageCache();
 		
 		//Recent tags
 		recentTags = new TagCache(10);
-		String recentTagsStr = config.getProperty("recent_tags");
+		String recentTagsStr = config.getRecentTags();
 		if(recentTagsStr != null)
 			recentTags.addAll(Arrays.asList(recentTagsStr.split(",")));
 		
 		//View settings
-		if(config.containsKey("window_width") && config.containsKey("window_height"))
+		if(config.isWindowSizeSet())
 		{
-			try
-			{
-				int width = Integer.parseUnsignedInt(config.getProperty("window_width"));
-				int height = Integer.parseUnsignedInt(config.getProperty("window_height"));
+			int width = config.getWindowWidth();
+			int height = config.getWindowHeight();
+			if(width > 0 && height > 0)
 				view.setSize(width, height);
-			}
-			catch(NumberFormatException e)
-			{
-				Log.error("Invalid window sizes", e);
-			}
 		}
 	}
 	
 	public void start()
 	{
-		libraryManager = LibraryManager.getInstance();
+		Set<String> paths = config.getLibraries();
+		libraryManager = LibraryManager.initInstance(paths);
 		List<Library> libraries = libraryManager.getLibraries();
 		view.setLibraries(libraries);
 		String selectedId = config.getProperty("current_library", libraries.size() > 0 ? libraries.get(0).getId() : "");
@@ -90,7 +87,7 @@ public class GifOrganizer implements UIController
 			currentLibrary.setLoaded(false);
 		
 		currentLibrary = library;
-		setConfigProperty("current_library", currentLibrary.getId());
+		config.setProperty("current_library", currentLibrary.getId());
 		
 		if(!currentLibrary.isLoaded())
 		{
@@ -108,8 +105,17 @@ public class GifOrganizer implements UIController
 		{
 			if(ImageLoader.IMAGE_FILTER.accept(file.getParentFile(), file.getName()))
 			{
+				// Get tags
+				ImageLoader imageLoader = ImageLoader.getInstance(file.getAbsolutePath());
+				ImageFrame[] image = imageLoader.readFull();
+				Set<String> tags = view.getMultiTagInput(image, recentTags);
+				if(tags == null)
+					// Canceled add
+					continue;
+				
+				// Move image
 				Path source = Paths.get(file.getAbsolutePath());
-				ImageData data = new ImageData(file.getName());
+				ImageData data = new ImageData(source, file.getName());
 				while(currentLibrary.hasImage(data))
 					data.regenId();
 				Path target = Paths.get(currentLibrary.getImagePath(data));
@@ -118,21 +124,25 @@ public class GifOrganizer implements UIController
 				Log.info("\tSource: "+source);
 				Log.info("\tTarget: "+target);
 				
-				//Move image to library folder
+				// Move image to library folder
 				try
 				{
 					Files.move(source, target);
 				}
-				catch(IOException e)
+				catch(FileAlreadyExistsException e)
+				{
+					Log.error("Failed to move image file: cannot overwrite", e);
+					view.notifyMoveError();
+					continue;
+				}
+				catch(Exception e)
 				{
 					Log.error("Failed to move image file", e);
+					view.notifyMoveError();
 					continue;
 				}
 				
-				//Get new image tags
-				ImageLoader imageLoader = ImageLoader.getInstance(currentLibrary.getImagePath(data));
-				ImageFrame[] image = imageLoader.readFull();
-				Set<String> tags = view.getMultiTagInput(image, recentTags);
+				// Set new image tags
 				for(String tag : tags)
 				{
 					tag = tag.trim().toLowerCase();
@@ -140,7 +150,7 @@ public class GifOrganizer implements UIController
 				}
 				useTags(tags.toArray(new String[0]));
 				
-				//Add image to library index
+				// Add image to library index
 				data.setThumbnail(ImageLoader.getThumbnail(currentLibrary, data.getId(), data.getPath()));
 				currentLibrary.addImage(data);
 				saveLibrary();
@@ -162,10 +172,37 @@ public class GifOrganizer implements UIController
 	@Override
 	public void addUrlFromDrag(URL url)
 	{
-		//TODO
-		// 1. Download file
-		// 2. Verify type
-		// 3. addFilesFromDrag(...)
+		Log.info("Requested drag from URL: "+url.toString());
+		view.startDownloadProgress();
+		
+		// Create temporary file
+		String imageFileName = url.getFile();
+		String ext = imageFileName.substring(imageFileName.lastIndexOf('.'));
+		
+		File tempFile;
+		try
+		{
+			tempFile = File.createTempFile("giforg-temp", ext);
+		}
+		catch(IOException e)
+		{
+			Log.error("Failed to create temp file for image download", e);
+			view.notifyDownloadError();
+			return;
+		}
+		
+		// Download file
+		if(!IOUtil.downloadFile(url, tempFile))
+		{
+			Log.error("Failed to for image download");
+			view.notifyDownloadError();
+			return;
+		}
+		
+		view.endProgress();
+		
+		// Process file
+		addFilesFromDrag(Collections.singletonList(tempFile));
 	}
 	
 	@Override
@@ -183,6 +220,14 @@ public class GifOrganizer implements UIController
 	}
 	
 	@Override
+	public void starImage(ImageData image)
+	{
+		image.setStarred(!image.isStarred());
+		view.refreshImageMenu();
+		saveLibrary();
+	}
+	
+	@Override
 	public void animateImage(ImageData image)
 	{
 		ImageLoaderWorker loader = new ImageLoaderWorker(image);
@@ -192,48 +237,99 @@ public class GifOrganizer implements UIController
 	@Override
 	public void uploadImage(ImageData image)
 	{
-		//Image already uploaded
+		// Image already uploaded
 		if(image.getLinks().size() > 0)
 		{
 			Log.info("Image already uploaded");
 			copyImageLink(image.getLinks().get(0));
 			view.notifyLinkCopy();
 		}
-		//Upload image
+		// Upload image
 		else
 		{
+			view.startUploadProgress();
+			
 			ServiceManager service = ServiceManager.getInstance(null, image.getPath());
-			service.upload(currentLibrary, image, this::uploadImageCallback);
+			service.upload(currentLibrary, image, this::uploadImageCallback, this::uploadProgressCallback);
 		}
 	}
 	
-	public void uploadImageCallback(ImageData image, ServiceLink link)
+	public void uploadProgressCallback(int progress)
 	{
-		if(link != null)
+		if(progress > 0)
+		{
+			if(progress < 100)
+				view.setProgress(progress);
+			else
+				view.endUploadProgress();
+		}
+	}
+	
+	public void uploadImageCallback(ServiceError error, ImageData image, ServiceLink link)
+	{
+		view.endProgress();
+		
+		// Upload successful
+		if(error == ServiceError.NONE)
 		{
 			image.addLink(link);
 			copyImageLink(link);
-			view.notifyUpload(true);
 			saveLibrary();
 		}
-		else
+		
+		view.notifyUpload(ServiceError.NONE);
+	}
+	
+	@Override
+	public void openFileSystem(ImageData image)
+	{
+		String path = currentLibrary.getImagePath(image);
+		if(System.getProperty("os.name").toLowerCase().contains("windows"))
 		{
-			view.notifyUpload(false);
+			ProcessBuilder b = new ProcessBuilder("explorer", "/select,"+path);
+			try
+			{
+				b.start();
+				return;
+			}
+			catch(Exception e)
+			{
+				Log.error("Failed to use Windows-specific file system open", e);
+			}
+		}
+		
+		if(Desktop.isDesktopSupported())
+		{
+			try
+			{
+				Desktop.getDesktop().open(new File(path).getParentFile());
+			}
+			catch(Exception e)
+			{
+				Log.error("Failed to open default file browser", e);
+			}
 		}
 	}
 	
 	@Override
-	public void addToSearchQuery(String newQuery, boolean onEnd)
+	public void setSearchFavorites(String currentQuery, boolean onlyFavs)
 	{
-		newQuery = newQuery.toLowerCase();
-		new SearchWorker(newQuery, onEnd, false, this::searchCallback).execute();
+		currentQuery = currentQuery.toLowerCase();
+		new SearchWorker(currentQuery, false, true, onlyFavs, this::searchCallback).execute();
 	}
 	
 	@Override
-	public void removedFromSearchQuery(String newQuery, boolean onEnd)
+	public void addToSearchQuery(String newQuery, boolean onEnd, boolean onlyFavs)
 	{
 		newQuery = newQuery.toLowerCase();
-		new SearchWorker(newQuery, onEnd, true, this::searchCallback).execute();
+		new SearchWorker(newQuery, onEnd, false, onlyFavs, this::searchCallback).execute();
+	}
+	
+	@Override
+	public void removedFromSearchQuery(String newQuery, boolean onEnd, boolean onlyFavs)
+	{
+		newQuery = newQuery.toLowerCase();
+		new SearchWorker(newQuery, onEnd, true, onlyFavs, this::searchCallback).execute();
 	}
 	
 	private void searchCallback(List<ImageData> images)
@@ -246,8 +342,7 @@ public class GifOrganizer implements UIController
 	{
 		Log.info("Closing");
 		
-		setConfigProperty("window_width", String.valueOf(view.getWidth()), false);
-		setConfigProperty("window_height", String.valueOf(view.getHeight()), true);
+		config.setWindowSize(view.getWidth(), view.getHeight());
 		
 		System.exit(0);
 	}
@@ -268,7 +363,14 @@ public class GifOrganizer implements UIController
 				library.addImage(image);
 		}
 		
-		LibraryManager.getInstance().addLibrary(library);
+		// Add new library to manager
+		LibraryManager man = LibraryManager.getInstance();
+		man.addLibrary(library);
+		// Save library list
+		Log.info("Saving library list");
+		config.setLibraries(man.getLibraries().stream().map((lib) -> lib.getPath()).collect(Collectors.toSet()));
+		
+		// Update UI
 		view.setLibraries(LibraryManager.getInstance().getLibraries());
 		view.selectLibrary(library);
 	}
@@ -298,6 +400,7 @@ public class GifOrganizer implements UIController
 			view.resetSearch();
 			view.setLibraryLoading(false);
 			view.setImages(currentLibrary.getImages());
+			view.setLibrarySize(currentLibrary.getImages().size());
 		}
 	}
 	
@@ -351,14 +454,15 @@ public class GifOrganizer implements UIController
 	private class SearchWorker extends SwingWorker<List<ImageData>, Void>
 	{
 		private String diff;
-		private boolean onEnd, removed;
+		private boolean onEnd, removed, onlyFavs;
 		private Consumer<List<ImageData>> callback;
 		
-		public SearchWorker(String diff, boolean onEnd, boolean removed, Consumer<List<ImageData>> callback)
+		public SearchWorker(String diff, boolean onEnd, boolean removed, boolean onlyFavs, Consumer<List<ImageData>> callback)
 		{
 			this.diff = diff;
 			this.onEnd = onEnd;
 			this.removed = removed;
+			this.onlyFavs = onlyFavs;
 			this.callback = callback;
 		}
 		
@@ -366,8 +470,8 @@ public class GifOrganizer implements UIController
 		protected List<ImageData> doInBackground()
 		{
 			if(removed)
-				return search.removeFromQuery(diff, onEnd);
-			return search.addToQuery(diff, onEnd);
+				return search.removeFromQuery(diff, onEnd, onlyFavs);
+			return search.addToQuery(diff, onEnd, onlyFavs);
 		}
 		
 		@Override
@@ -393,29 +497,20 @@ public class GifOrganizer implements UIController
 			currentLibrary.addTag(tag);
 			recentTags.add(tag);
 		}
-		setConfigProperty("recent_tags", recentTags.toPropertyString());
-	}
-	
-	private void setConfigProperty(String key, String value)
-	{
-		setConfigProperty(key, value, true);
-	}
-	
-	private void setConfigProperty(String key, String value, boolean save)
-	{
-		config.setProperty(key, value);
-		SettingsLoader.saveProperties("config", config);
+		config.setRecentTags(recentTags.toPropertyString());
 	}
 	
 	private void saveLibrary()
 	{
 		Log.info("Saving library");
+		
+		// Save current library
 		LibraryManager.saveLibrary(currentLibrary);
 	}
 	
 	private ImageData createImage(File file, Library library)
 	{
-		ImageData data = new ImageData(file.getName());
+		ImageData data = new ImageData(file.toPath(), file.getName());
 		data.setThumbnail(ImageLoader.getThumbnail(library, data.getId(), data.getPath()));
 		return data;
 	}

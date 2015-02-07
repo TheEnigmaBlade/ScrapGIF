@@ -2,21 +2,28 @@ package net.enigmablade.gif.library;
 
 import java.awt.image.*;
 import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 import com.alee.log.*;
-import net.enigmablade.gif.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.services.*;
+import net.enigmablade.gif.util.*;
 import net.enigmablade.jsonic.*;
 
 public class LibraryManager
 {
-	private static LibraryManager INSTANCE;
+	private static final String SETTINGS_DIR = "config";
+	private static final String SETTINGS_FILE = "library.json";
+	
+	private static LibraryManager INSTANCE = new LibraryManager(Collections.<String>emptySet());
+	
+	public static LibraryManager initInstance(Set<String> libraryPaths)
+	{
+		return INSTANCE = new LibraryManager(libraryPaths);
+	}
 	
 	public static LibraryManager getInstance()
 	{
-		if(INSTANCE == null)
-			INSTANCE = new LibraryManager();
 		return INSTANCE;
 	}
 	
@@ -24,13 +31,22 @@ public class LibraryManager
 	
 	//Loading
 	
-	public LibraryManager()
+	public LibraryManager(Set<String> libraryPaths)
 	{
-		File[] libraryFiles = SettingsLoader.getLibraries();
-		libraries = new HashMap<>(libraryFiles.length);
+		libraries = new HashMap<>(libraryPaths.size());
 		
-		for(File libraryFile : libraryFiles)
+		for(String libraryPath : libraryPaths)
 		{
+			File libraryFile = getLibraryConfig(libraryPath);
+			
+			// File doesn't exist
+			if(libraryFile == null)
+			{
+				Log.error("Library file doesn't exist: "+libraryPath);
+				continue;
+			}
+			
+			// Load and parse JSON contents
 			try
 			{
 				JsonObject libraryObj = JsonParser.parseObject(libraryFile, false);
@@ -52,6 +68,13 @@ public class LibraryManager
 				continue;
 			}
 		}
+	}
+	
+	private static File getLibraryConfig(String libraryPath)
+	{
+		Path path = Paths.get(libraryPath, SETTINGS_DIR, SETTINGS_FILE);
+		Log.info("Getting library config file: "+path.toString());
+		return path.toFile();
 	}
 	
 	private static Library loadLibrary(JsonObject libraryObj) throws JsonParseException
@@ -97,7 +120,8 @@ public class LibraryManager
 	private static ImageData createItem(Library library, JsonObject obj)
 	{
 		String id = obj.getString("id");
-		String path = obj.getString("path");
+		String shortPath = obj.getString("path");
+		Path path = new File(library.getImagePath(shortPath)).toPath();
 		boolean starred = obj.getBoolean("starred");
 		
 		List<String> tags = new ArrayList<>();
@@ -110,18 +134,18 @@ public class LibraryManager
 		for(JsonIterator it = linksA.iterator(); it.hasNext();)
 			links.add(createLink(it.nextObject()));
 		
-		File file = new File(library.getImagePath(path));
+		File file = new File(library.getImagePath(shortPath));
 		if(!file.exists() || !file.isFile())
 		{
 			Log.error("Bad file: "+file.getAbsolutePath());
 			return null;
 		}
 		
-		BufferedImage thumbnail = ImageLoader.getThumbnail(library, id, path);
+		BufferedImage thumbnail = ImageLoader.getThumbnail(library, id, shortPath);
 		if(thumbnail == null)
 			return null;
 		
-		return new ImageData(id, path, tags, starred, links, thumbnail);
+		return new ImageData(id, path, shortPath, tags, starred, links, thumbnail);
 	}
 	
 	private static ServiceLink createLink(JsonObject obj)
@@ -149,7 +173,7 @@ public class LibraryManager
 			imagesA.add(createItemJson(image));
 		libraryObj.put("images", imagesA);
 		
-		return SettingsLoader.saveLibrary(library.getName(), libraryObj);
+		return writeLibrary(library.getPath(), libraryObj);
 	}
 	
 	private static JsonObject createItemJson(ImageData data)
@@ -178,6 +202,12 @@ public class LibraryManager
 		o.put("type", link.getType());
 		o.put("id", link.getId());
 		return o;
+	}
+	
+	private static boolean writeLibrary(String libraryPath, JsonObject libraryObj)
+	{
+		File libraryFile = getLibraryConfig(libraryPath);
+		return IOUtil.writeFile(libraryFile, libraryObj.getJSON());
 	}
 	
 	//Accessor methods

@@ -1,4 +1,4 @@
-package net.enigmablade.gif.ui.dialogs;
+package tests.ui.dialogs;
 
 import java.util.*;
 import com.alee.laf.*;
@@ -6,6 +6,7 @@ import com.alee.log.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.search.*;
 import net.enigmablade.gif.ui.components.item.*;
+import net.enigmablade.gif.ui.dialogs.*;
 
 public class DialogTest
 {

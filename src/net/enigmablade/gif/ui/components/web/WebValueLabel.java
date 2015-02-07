@@ -4,24 +4,30 @@ import com.alee.laf.label.*;
 
 public class WebValueLabel extends WebLabel
 {
-	private String baseText;
+	private String baseText, endText;
 	private String value;
 	
 	public WebValueLabel()
 	{
-		baseText = value = "";
+		baseText = endText = value = "";
 	}
 	
 	public WebValueLabel(String baseText)
 	{
+		this(baseText, "");
+	}
+	
+	public WebValueLabel(String baseText, String endText)
+	{
 		this.baseText = baseText;
+		this.endText = endText;
 		setValue("");
 	}
 	
-	public WebValueLabel(String baseText, String value)
+	public WebValueLabel(String baseText, Object value)
 	{
 		this(baseText);
-		setValue(value);
+		setValue(value.toString());
 	}
 	
 	public WebValueLabel(String baseText, int value)
@@ -57,7 +63,7 @@ public class WebValueLabel extends WebLabel
 	public void setValue(String value)
 	{
 		this.value = value;
-		setText(baseText+value);
+		setText(baseText+value+endText);
 	}
 	
 	public void setValue(int value)

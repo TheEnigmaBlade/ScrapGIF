@@ -1,5 +1,6 @@
 package net.enigmablade.gif.library;
 
+import java.io.*;
 import java.util.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.jsonic.*;
@@ -107,12 +108,12 @@ public class Library implements Comparable<Library>
 	
 	public String getImagePath(String path)
 	{
-		return this.path+"/"+path;
+		return this.path+File.separator+path;
 	}
 	
 	public String getImagePath(ImageData image)
 	{
-		return this.path+"/"+image.getPath();
+		return this.path+File.separator+image.getPath();
 	}
 	
 	//Overrides

@@ -1,34 +1,41 @@
 package net.enigmablade.gif.img;
 
 import java.awt.image.*;
+import java.nio.file.*;
 import java.util.*;
+import com.alee.log.*;
 import net.enigmablade.gif.services.*;
 
 public class ImageData
 {
 	private String id;
-	private String path;
+	private Path path;
+	private String shortPath;
 	private List<String> tags;
-	private boolean starred = false;
+	private boolean starred;
 	private List<ServiceLink> links;
 	
 	private BufferedImage thumbnail;
 	
-	public ImageData(String path)
+	public ImageData(Path path, String shortPath)
 	{
-		genId(path);
-		this.path = id+path.substring(path.lastIndexOf('.'));
+		this.path = path;
+		genId(shortPath);
+		this.shortPath = id+shortPath.substring(shortPath.lastIndexOf('.'));
 		
 		this.tags = new ArrayList<>();
+		this.starred = false;
 		this.links = new ArrayList<>();
 		this.thumbnail = null;
 	}
 	
-	public ImageData(String id, String path, List<String> tags, boolean starred, List<ServiceLink> links, BufferedImage thumbnail)
+	public ImageData(String id, Path path, String shortPath, List<String> tags, boolean starred, List<ServiceLink> links, BufferedImage thumbnail)
 	{
 		this.id = id;
 		this.path = path;
+		this.shortPath = shortPath;
 		this.tags = tags;
+		this.starred = starred;
 		this.thumbnail = thumbnail;
 		this.links = links;
 	}
@@ -38,6 +45,8 @@ public class ImageData
 		thumbnail.flush();
 	}
 	
+	// Accessors
+	
 	public String getId()
 	{
 		return id;
@@ -45,7 +54,7 @@ public class ImageData
 	
 	public String getPath()
 	{
-		return path;
+		return shortPath;
 	}
 	
 	public BufferedImage getThumbnail()
@@ -105,7 +114,33 @@ public class ImageData
 		return thumbnail.getHeight();
 	}
 	
-	//Helpers
+	public long getLastModified()
+	{
+		try
+		{
+			return Files.getLastModifiedTime(path).toMillis();
+		}
+		catch(Exception e)
+		{
+			Log.error("Failed to get last modified attribute for "+path.toString(), e);
+			return -1;
+		}
+	}
+	
+	public long getSize()
+	{
+		try
+		{
+			return Files.size(path);
+		}
+		catch(Exception e)
+		{
+			Log.error("Failed to get file size attribute for "+path.toString(), e);
+			return -1;
+		}
+	}
+	
+	// Helpers
 	
 	public void genId(String path)
 	{

@@ -12,20 +12,26 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.text.*;
 import com.alee.extended.filechooser.*;
+import com.alee.extended.label.*;
 import com.alee.extended.layout.*;
 import com.alee.extended.statusbar.*;
 import com.alee.global.StyleConstants;
+import com.alee.laf.*;
+import com.alee.laf.checkbox.*;
 import com.alee.laf.combobox.*;
 import com.alee.laf.menu.*;
 import com.alee.laf.optionpane.*;
 import com.alee.laf.panel.*;
+import com.alee.laf.progressbar.*;
 import com.alee.laf.scroll.*;
 import com.alee.log.*;
 import com.alee.managers.notification.*;
 import com.alee.utils.*;
+import net.enigmablade.gif.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.library.*;
 import net.enigmablade.gif.search.*;
+import net.enigmablade.gif.services.*;
 import net.enigmablade.gif.ui.components.item.*;
 import net.enigmablade.gif.ui.components.web.*;
 import net.enigmablade.gif.ui.dialogs.*;
@@ -38,30 +44,33 @@ public class GifOrganizerUI extends CustomWebFrame
 	
 	private UIController controller;
 	
-	//Components
-	////Top bar
+	// Components
+	//// Top bar
 	private WebComboBox libraryComboBox;
 	private WebSearchField librarySearchField;
+	private WebCheckBox librarySearchFavorite;
 	
-	////Main area
+	//// Main area
 	private WebScrollPane itemScrollPane;
 	private ItemPanel itemPanel;
 	
-	////Bottom bar
-	private WebValueLabel imagesCount;
+	//// Bottom bar
+	private WebValueLabel imagesCount, imagesTotal;
+	private WebProgressBar progressBar;
 	
-	////Menu bar
+	//// Menu bar
 	
-	private WebMenuItem newLibraryMenuItem, newLibraryFolderMenuItem, manageLibrariesMenuItem, libraryImportMenuItem, libraryExportMenuItem;
+	private WebMenuItem newLibraryMenuItem, newLibraryFolderMenuItem, manageLibrariesMenuItem, exitMenuItem;
+	private WebMenuItem addImageMenuItem, addWebImageMenuItem, addFolderMenuItem, settingsMenuItem;
 	private WebMenuItem aboutMenuItem, siteMenuItem, webMenuItem;
 	
-	//Models
+	// Models
 	private CollectionComboBoxModel<Library> libraryComboBoxModel;
 	
-	//Data
+	// Data
 	private ItemImage hoveredImage;
 	
-	//Initialization
+	// Initialization
 	
 	static
 	{
@@ -118,7 +127,7 @@ public class GifOrganizerUI extends CustomWebFrame
 		WebPanel topBar = new WebPanel();
 		topBar.setUndecorated(true);
 		topBar.setLayout(new TableLayout(
-				new double[]{150, TableLayoutConstants.FILL},
+				new double[]{150, TableLayoutConstants.FILL, TableLayoutConstants.PREFERRED},
 				new double[]{TableLayoutConstants.FILL},
 				2, 0));
 		contentPane.add(topBar, BorderLayout.NORTH);
@@ -128,6 +137,10 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		librarySearchField = new WebSearchField();
 		topBar.add(librarySearchField, new TableLayoutConstraints(1, 0));
+		
+		librarySearchFavorite = new WebCheckBox("Favorites only");
+		librarySearchFavorite.setMargin(0, 0, 0, 3);
+		topBar.add(librarySearchFavorite, new TableLayoutConstraints(2, 0));
 		
 		//Main area
 		
@@ -146,8 +159,22 @@ public class GifOrganizerUI extends CustomWebFrame
 		statusBar.setUndecorated(true);
 		contentPane.add(statusBar, BorderLayout.SOUTH);
 		
-		imagesCount = new WebValueLabel("Images: ", 0);
+		imagesCount = new WebValueLabel("", " of");
+		imagesCount.setValue(0);
+		imagesCount.setMargin(0, 2, 0, 0);
 		statusBar.add(imagesCount);
+		
+		imagesTotal = new WebValueLabel("", " images");
+		imagesTotal.setValue(0);
+		imagesTotal.setMargin(0, 1, 0, 0);
+		statusBar.add(imagesTotal);
+		
+		progressBar = new WebProgressBar();
+		progressBar.setEnabled(false);
+		progressBar.setStringPainted(true);
+		progressBar.setString("");
+		progressBar.setFontSize(11);
+		statusBar.add(progressBar, ToolbarLayout.END);
 		
 		//Static
 		ItemImage.initStaticComponents();
@@ -210,7 +237,7 @@ public class GifOrganizerUI extends CustomWebFrame
 					String query = d.getText(0, d.getLength());
 					
 					System.out.println("Offset="+evt.getOffset()+", length="+d.getLength());
-					controller.addToSearchQuery(query, evt.getOffset() == d.getLength()-1);
+					controller.addToSearchQuery(query, evt.getOffset() == d.getLength()-1, librarySearchFavorite.isSelected());
 				}
 				catch(BadLocationException e)
 				{
@@ -231,7 +258,7 @@ public class GifOrganizerUI extends CustomWebFrame
 					String query = d.getText(0, d.getLength());
 					
 					System.out.println("Offset="+evt.getOffset()+", length="+d.getLength());
-					controller.removedFromSearchQuery(query, evt.getOffset() == d.getLength()-1);
+					controller.removedFromSearchQuery(query, evt.getOffset() == d.getLength()-1, librarySearchFavorite.isSelected());
 				}
 				catch(BadLocationException e)
 				{
@@ -242,6 +269,14 @@ public class GifOrganizerUI extends CustomWebFrame
 			@Override
 			public void changedUpdate(DocumentEvent e) { /* Not text input */ }
 			
+		});
+		
+		librarySearchFavorite.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent evt)
+			{
+				controller.setSearchFavorites(librarySearchField.getText(), librarySearchFavorite.isSelected());
+			}
 		});
 		
 		//Items
@@ -355,51 +390,77 @@ public class GifOrganizerUI extends CustomWebFrame
 		bar.setUndecorated(true);
 		setJMenuBar(bar);
 		
-		//Library menu
+		// Library menu
 		
 		WebMenu libraryMenu = new WebMenu("Library");
 		bar.add(libraryMenu);
 		
 		newLibraryMenuItem = new WebMenuItem("Create new...");
+		newLibraryMenuItem.setIcon(GifConstants.newAlbumIcon);
 		newLibraryMenuItem.setEnabled(false);
 		libraryMenu.add(newLibraryMenuItem);
 		
-		newLibraryFolderMenuItem = new WebMenuItem("Create from folder...");
+		newLibraryFolderMenuItem = new WebMenuItem("Import folder...");
+		newLibraryFolderMenuItem.setIcon(GifConstants.importAlbumIcon);
 		libraryMenu.add(newLibraryFolderMenuItem);
 		
 		libraryMenu.addSeparator();
 		
 		manageLibrariesMenuItem = new WebMenuItem("Manage...");
+		manageLibrariesMenuItem.setIcon(GifConstants.manageAlbumsIcon);
 		manageLibrariesMenuItem.setEnabled(false);
 		libraryMenu.add(manageLibrariesMenuItem);
 		
 		libraryMenu.addSeparator();
 		
-		libraryImportMenuItem = new WebMenuItem("Import...");
-		libraryImportMenuItem.setEnabled(false);
-		libraryMenu.add(libraryImportMenuItem);
+		exitMenuItem = new WebMenuItem("Quit");
+		exitMenuItem.setIcon(GifConstants.exitIcon);
+		libraryMenu.add(exitMenuItem);
 		
-		libraryExportMenuItem = new WebMenuItem("Export...");
-		libraryExportMenuItem.setEnabled(false);
-		libraryMenu.add(libraryExportMenuItem);
+		// Edit menu
 		
-		//About
+		WebMenu editMenu = new WebMenu("Edit");
+		bar.add(editMenu);
+		
+		addImageMenuItem = new WebMenuItem("Add image...");
+		addImageMenuItem.setIcon(GifConstants.addImageIcon);
+		addImageMenuItem.setEnabled(false);
+		editMenu.add(addImageMenuItem);
+		
+		addWebImageMenuItem = new WebMenuItem("Add web image...");
+		addWebImageMenuItem.setIcon(GifConstants.addWebImageIcon);
+		addWebImageMenuItem.setEnabled(false);
+		editMenu.add(addWebImageMenuItem);
+		
+		addFolderMenuItem = new WebMenuItem("Add folder...");
+		addFolderMenuItem.setIcon(GifConstants.addFolderIcon);
+		addFolderMenuItem.setEnabled(false);
+		editMenu.add(addFolderMenuItem);
+		
+		editMenu.addSeparator();
+		
+		settingsMenuItem = new WebMenuItem("Settings...");
+		settingsMenuItem.setIcon(GifConstants.settingsIcon);
+		editMenu.add(settingsMenuItem);
+		
+		// About
 		
 		WebMenu aboutMenu = new WebMenu("About");
 		bar.add(aboutMenu);
 		
-		aboutMenuItem = new WebMenuItem("About");
+		aboutMenuItem = new WebMenuItem("About...");
+		aboutMenuItem.setIcon(GifConstants.aboutIcon);
 		aboutMenuItem.setEnabled(false);
 		aboutMenu.add(aboutMenuItem);
 		
 		aboutMenu.addSeparator();
 		
 		siteMenuItem = new WebMenuItem("EnigmaBlade.net");
-		siteMenuItem.setEnabled(false);
+		siteMenuItem.setIcon(WebLinkLabel.LINK_ICON);
 		aboutMenu.add(siteMenuItem);
 		
 		webMenuItem = new WebMenuItem("Web Look and Feel");
-		webMenuItem.setEnabled(false);
+		webMenuItem.setIcon(WebLookAndFeel.getIcon(16));
 		aboutMenu.add(webMenuItem);
 	}
 	
@@ -427,7 +488,7 @@ public class GifOrganizerUI extends CustomWebFrame
 		center();
 	}
 	
-	//UI methods
+	// UI methods
 	
 	public void uploadImage(ImageData data)
 	{
@@ -438,7 +499,7 @@ public class GifOrganizerUI extends CustomWebFrame
 	public void openImageFolder(ImageData data)
 	{
 		Log.info("Open folder triggered for "+data.getId());
-		//TODO
+		controller.openFileSystem(data);
 	}
 	
 	public void tagImage(ImageData data)
@@ -450,7 +511,7 @@ public class GifOrganizerUI extends CustomWebFrame
 	public void starImage(ImageData data)
 	{
 		Log.info("Star image triggered for "+data.getId());
-		//TODO
+		controller.starImage(data);
 	}
 	
 	private void stopAnimations()
@@ -464,7 +525,7 @@ public class GifOrganizerUI extends CustomWebFrame
 		}
 	}
 	
-	//Interaction
+	// Interaction
 	
 	public void setLibraries(List<Library> libraries)
 	{
@@ -487,6 +548,11 @@ public class GifOrganizerUI extends CustomWebFrame
 	public void setLibraryLoading(boolean loading)
 	{
 		LibraryLoadDialog.showDialog(loading ? this : null);
+	}
+	
+	public void setLibrarySize(int size)
+	{
+		imagesTotal.setValue(size);
 	}
 	
 	public void addImage(ImageData data)
@@ -513,8 +579,6 @@ public class GifOrganizerUI extends CustomWebFrame
 			itemPanel.doLayout();
 			itemPanel.revalidate();
 			itemPanel.repaint();
-			//itemScrollPane.revalidate();
-			//itemScrollPane.repaint();
 		});
 	}
 	
@@ -548,23 +612,75 @@ public class GifOrganizerUI extends CustomWebFrame
 		itemPanel.setItemAnimated(id, frames);
 	}
 	
+	public void refreshImageMenu()
+	{
+		hoveredImage.closeMenu();
+		hoveredImage.openMenu();
+	}
+	
 	public void resetSearch()
 	{
 		librarySearchField.clear();
 		SwingUtilities.invokeLater(() -> itemPanel.requestFocus());
 	}
 	
-	public void notifyUpload(boolean success)
+	// Information display
+	
+	public void startProgress()
+	{
+		progressBar.setEnabled(true);
+		progressBar.setIndeterminate(true);
+	}
+	
+	public void setProgress(int progress)
+	{
+		if(progressBar.isIndeterminate())
+			progressBar.setIndeterminate(false);
+		
+		progressBar.setValue(progress);
+	}
+	
+	public void endProgress()
+	{
+		progressBar.setEnabled(false);
+		progressBar.setIndeterminate(false);
+		progressBar.setString("");
+	}
+	
+	public void startUploadProgress()
+	{
+		startProgress();
+		progressBar.setString("Uploading");
+		progressBar.setMaximum(100);
+	}
+	
+	public void endUploadProgress()
+	{
+		progressBar.setIndeterminate(true);
+		progressBar.setString("Waiting for image link");
+	}
+	
+	public void startDownloadProgress()
+	{
+		startProgress();
+		progressBar.setString("Downloading");
+		progressBar.setMaximum(100);
+	}
+	
+	// Notifications
+	
+	public void notifyUpload(ServiceError error)
 	{
 		WebNotificationPopup notice = new WebNotificationPopup();
-		notice.setDisplayTime(5000);
-		if(success)
+		if(error == ServiceError.NONE)
 		{
+			notice.setDisplayTime(5000);
 			notice.setIcon(NotificationIcon.information);
 			notice.setContent("Image successfully uploaded");
 		}
 		else
 		{
+			notice.setDisplayTime(8000);
 			notice.setIcon(NotificationIcon.error);
 			notice.setContent("Image upload failed");
 		}
@@ -589,14 +705,32 @@ public class GifOrganizerUI extends CustomWebFrame
 		NotificationManager.showNotification(this, notice);
 	}
 	
-	//Internal updates
+	public void notifyMoveError()
+	{
+		WebNotificationPopup notice = new WebNotificationPopup();
+		notice.setDisplayTime(5000);
+		notice.setIcon(NotificationIcon.error);
+		notice.setContent("Could not move files to library");
+		NotificationManager.showNotification(this, notice);
+	}
+	
+	public void notifyDownloadError()
+	{
+		WebNotificationPopup notice = new WebNotificationPopup();
+		notice.setDisplayTime(5000);
+		notice.setIcon(NotificationIcon.error);
+		notice.setContent("Failed to download image");
+		NotificationManager.showNotification(this, notice);
+	}
+	
+	// Internal updates
 	
 	private void updateNumImages()
 	{
 		imagesCount.setValue(itemPanel.getNumImages());
 	}
 	
-	//Dialog requests
+	// Dialog requests
 	
 	public String getTagInput()
 	{
@@ -614,7 +748,7 @@ public class GifOrganizerUI extends CustomWebFrame
 		return MultiTagDialog.showDialog(image, recentTags);
 	}
 	
-	//Settings
+	// Settings
 	
 	@Override
 	public void setSize(int width, int height)
