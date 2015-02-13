@@ -2,7 +2,9 @@ package net.enigmablade.gif;
 
 import com.alee.laf.*;
 import com.alee.log.*;
+import com.alee.managers.language.*;
 import net.enigmablade.gif.ui.*;
+import net.enigmablade.gif.ui.lang.*;
 
 public class GifOrganizerMain
 {
@@ -30,7 +32,7 @@ public class GifOrganizerMain
 	private static void initLog(boolean console)
 	{
 		System.setProperty("org.slf4j.simpleLogger.logFile", console ? "System.out" : "lastrun.log");
-		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "debug");
+		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "info");
 		System.setProperty("org.slf4j.simpleLogger.showLogName", "true");
 		System.setProperty("org.slf4j.simpleLogger.showShortLogName", "true");
 		System.setProperty("org.slf4j.simpleLogger.levelInBrackets", "true");
@@ -55,6 +57,13 @@ public class GifOrganizerMain
 		
 		WebLookAndFeel.setDecorateFrames(true);
 		WebLookAndFeel.setDecorateDialogs(true);
+		
+		LanguageManager.setSupportedLanguages(LanguageManager.ENGLISH);
+		LanguageManager.initialize();
+		//LanguageManager.registerLanguageUpdater(new LangAbstractButtonLU());
+		//LanguageManager.registerLanguageUpdater(new LangWebFrameLU());
+		LanguageManager.registerLanguageUpdater(new WebSearchFieldLU());
+		LanguageManager.addDictionary(ResourceLoader.getResource("languages.xml"));
 	}
 	
 	private static GifOrganizer initController()

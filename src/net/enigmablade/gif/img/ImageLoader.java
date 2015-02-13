@@ -2,22 +2,31 @@ package net.enigmablade.gif.img;
 
 import java.awt.image.*;
 import java.io.*;
+import java.util.*;
 import javax.imageio.*;
 import com.alee.log.*;
+import com.alee.utils.*;
 import com.mortennobel.imagescaling.*;
 import net.enigmablade.gif.*;
-import net.enigmablade.gif.img.gif.*;
 import net.enigmablade.gif.library.*;
 
 public abstract class ImageLoader
 {
+	public static final Map<String, String> supportedFiletypes;
+	static
+	{
+		supportedFiletypes = new HashMap<>();
+		supportedFiletypes.put("gif", "net.enigmablade.gif.img.gif.GifLoader");
+		supportedFiletypes.put("webm", "net.enigmablade.gif.img.webm.WebMLoader");
+	}
+	
 	public static final FilenameFilter IMAGE_FILTER = (File dir, String name) -> {
 		String ext = name.substring(name.lastIndexOf('.')+1).toLowerCase();
-		switch(ext)
-		{
-			case "gif": return true;
-			default: return false;
-		}
+		return supportedFiletypes.containsKey(ext);
+	};
+	
+	public static final FileFilter IMAGE_FILE_FILTER = (File file) -> {
+		return IMAGE_FILTER.accept(file.getParentFile(), file.getName());
 	};
 	
 	//Per-type instancing
@@ -25,11 +34,20 @@ public abstract class ImageLoader
 	public static ImageLoader getInstance(String path)
 	{
 		String ext = path.substring(path.lastIndexOf('.')+1).toLowerCase();
-		switch(ext)
+		String className = supportedFiletypes.get(ext);
+		if(className != null)
 		{
-			case "gif": return new GifLoader(path);
-			default: return null;
+			try
+			{
+				return ReflectUtils.createInstance(className, path);
+			}
+			catch(Exception e)
+			{
+				Log.error("Failed to create instance of image loader", e);
+			}
 		}
+		
+		return null;
 	}
 	
 	//Loader stuff
@@ -75,7 +93,7 @@ public abstract class ImageLoader
 			}
 		}
 		
-		ImageLoader imgLoad = ImageLoader.getInstance(library.getImagePath(imagePath));
+		ImageLoader imgLoad = ImageLoader.getInstance(library.getImagePath(imagePath).toString());
 		ImageFrame staticFrame = imgLoad.readFirstFrame();
 		if(staticFrame == null)
 		{

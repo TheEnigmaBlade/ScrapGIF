@@ -12,14 +12,16 @@ import java.util.function.*;
 import java.util.stream.*;
 import javax.swing.*;
 import com.alee.log.*;
+import com.alee.managers.language.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.library.*;
 import net.enigmablade.gif.search.*;
 import net.enigmablade.gif.services.*;
 import net.enigmablade.gif.ui.*;
+import net.enigmablade.gif.ui.components.item.*;
 import net.enigmablade.gif.util.*;
 
-public class GifOrganizer implements UIController
+public class GifOrganizer implements UIController, FileSystemAccessor
 {
 	private Config config;
 	
@@ -32,7 +34,7 @@ public class GifOrganizer implements UIController
 	
 	private SearchManager search;
 	
-	//Initialization
+	// Initialization
 	
 	public GifOrganizer()
 	{
@@ -46,16 +48,19 @@ public class GifOrganizer implements UIController
 	{
 		config = SettingsLoader.getConfig("config");
 		
-		//Image cache
+		// Image cache
 		imageCache = new ImageCache();
 		
-		//Recent tags
+		// Image display
+		view.setImageSize(ItemSize.NORMAL);
+		
+		// Recent tags
 		recentTags = new TagCache(10);
 		String recentTagsStr = config.getRecentTags();
 		if(recentTagsStr != null)
 			recentTags.addAll(Arrays.asList(recentTagsStr.split(",")));
 		
-		//View settings
+		// View settings
 		if(config.isWindowSizeSet())
 		{
 			int width = config.getWindowWidth();
@@ -76,7 +81,7 @@ public class GifOrganizer implements UIController
 		view.selectLibrary(libraryManager.getLibrary(selectedId));
 	}
 	
-	//UI interaction
+	// UI interaction
 	
 	@Override
 	public void setLibrary(Library library)
@@ -94,6 +99,10 @@ public class GifOrganizer implements UIController
 			new LibraryLoaderWorker(currentLibrary).execute();
 			view.setLibraryLoading(true);
 		}
+		else
+		{
+			refreshCurrentLibrary();
+		}
 	}
 	
 	@Override
@@ -105,59 +114,7 @@ public class GifOrganizer implements UIController
 		{
 			if(ImageLoader.IMAGE_FILTER.accept(file.getParentFile(), file.getName()))
 			{
-				// Get tags
-				ImageLoader imageLoader = ImageLoader.getInstance(file.getAbsolutePath());
-				ImageFrame[] image = imageLoader.readFull();
-				Set<String> tags = view.getMultiTagInput(image, recentTags);
-				if(tags == null)
-					// Canceled add
-					continue;
-				
-				// Move image
-				Path source = Paths.get(file.getAbsolutePath());
-				ImageData data = new ImageData(source, file.getName());
-				while(currentLibrary.hasImage(data))
-					data.regenId();
-				Path target = Paths.get(currentLibrary.getImagePath(data));
-				
-				Log.info("Moving dragged image");
-				Log.info("\tSource: "+source);
-				Log.info("\tTarget: "+target);
-				
-				// Move image to library folder
-				try
-				{
-					Files.move(source, target);
-				}
-				catch(FileAlreadyExistsException e)
-				{
-					Log.error("Failed to move image file: cannot overwrite", e);
-					view.notifyMoveError();
-					continue;
-				}
-				catch(Exception e)
-				{
-					Log.error("Failed to move image file", e);
-					view.notifyMoveError();
-					continue;
-				}
-				
-				// Set new image tags
-				for(String tag : tags)
-				{
-					tag = tag.trim().toLowerCase();
-					data.addTag(tag);
-				}
-				useTags(tags.toArray(new String[0]));
-				
-				// Add image to library index
-				data.setThumbnail(ImageLoader.getThumbnail(currentLibrary, data.getId(), data.getPath()));
-				currentLibrary.addImage(data);
-				saveLibrary();
-				
-				view.addImage(data);
-				search.buildSearchFromLibrary(currentLibrary);
-				view.resetSearch();
+				addImage(file, true, true);
 			}
 			else
 			{
@@ -173,6 +130,13 @@ public class GifOrganizer implements UIController
 	public void addUrlFromDrag(URL url)
 	{
 		Log.info("Requested drag from URL: "+url.toString());
+		if(!ImageLoader.IMAGE_FILTER.accept(null, url.toString()))
+		{
+			Log.warn("Invalid image extension");
+			view.notifyBadFile();
+			return;
+		}
+		
 		view.startDownloadProgress();
 		
 		// Create temporary file
@@ -249,8 +213,17 @@ public class GifOrganizer implements UIController
 		{
 			view.startUploadProgress();
 			
-			ServiceManager service = ServiceManager.getInstance(null, image.getPath());
-			service.upload(currentLibrary, image, this::uploadImageCallback, this::uploadProgressCallback);
+			Service service = ServiceManager.getService(config.getPreferredServices(), image, this);
+			if(service == null)
+			{
+				Log.warn("No service exists for image: type="+image.getType());
+				view.notifyUpload(ServiceError.NO_SERVICE);
+				view.endProgress();
+			}
+			else
+			{
+				service.upload(currentLibrary.getImagePath(image).toFile(), image, this::uploadImageCallback, this::uploadProgressCallback);
+			}
 		}
 	}
 	
@@ -276,17 +249,20 @@ public class GifOrganizer implements UIController
 			copyImageLink(link);
 			saveLibrary();
 		}
-		
-		view.notifyUpload(ServiceError.NONE);
+		else
+		{
+			view.notifyUpload(error);
+		}
 	}
 	
 	@Override
 	public void openFileSystem(ImageData image)
 	{
-		String path = currentLibrary.getImagePath(image);
+		Log.info("Opening file system: "+image.getPath()+" in "+currentLibrary.getPath());
 		if(System.getProperty("os.name").toLowerCase().contains("windows"))
 		{
-			ProcessBuilder b = new ProcessBuilder("explorer", "/select,"+path);
+			ProcessBuilder b = new ProcessBuilder("explorer", "/select,\""+image.getPath()+"\"");
+			b.directory(new File(currentLibrary.getPath()));
 			try
 			{
 				b.start();
@@ -302,7 +278,7 @@ public class GifOrganizer implements UIController
 		{
 			try
 			{
-				Desktop.getDesktop().open(new File(path).getParentFile());
+				Desktop.getDesktop().open(new File(currentLibrary.getPath()));
 			}
 			catch(Exception e)
 			{
@@ -347,35 +323,134 @@ public class GifOrganizer implements UIController
 		System.exit(0);
 	}
 	
-	////Menu bar
+	//// Menu bar
 	
 	@Override
 	public void createLibrary(File dir, String name)
 	{
-		Log.info("Creating library: "+name);
+		Log.info("Creating library: name="+name+", dir="+dir.getAbsolutePath());
+		
+		// Resolve library dir
+		dir = dir.toPath().resolve(name).toFile();
+		Log.info("Making dir structure for: "+dir.getAbsolutePath());
+		if(!dir.mkdirs())
+		{
+			Log.error("Failed to create library directories");
+			view.notifyLibraryCreateError();
+			return;
+		}
+		
+		// Create and add library
+		Library library = new Library(name, dir.getAbsolutePath());
+		LibraryManager.getInstance().addLibrary(library);
+		
+		updateLibraries(library);
+	}
+	
+	@Override
+	public void createLibraryFrom(File dir, String name)
+	{
+		Log.info("Creating library from: name="+name+", dir="+dir.getAbsolutePath());
 		Library library = new Library(name, dir.getAbsolutePath());
 		
+		// Add existing images to the library
 		File[] files = dir.listFiles(ImageLoader.IMAGE_FILTER);
 		for(File file : files)
 		{
-			ImageData image = createImage(file, library);
-			if(image != null)
-				library.addImage(image);
+			library.addImage(createImage(file, library));
 		}
 		
 		// Add new library to manager
-		LibraryManager man = LibraryManager.getInstance();
-		man.addLibrary(library);
-		// Save library list
-		Log.info("Saving library list");
-		config.setLibraries(man.getLibraries().stream().map((lib) -> lib.getPath()).collect(Collectors.toSet()));
+		LibraryManager.getInstance().addLibrary(library);
 		
-		// Update UI
-		view.setLibraries(LibraryManager.getInstance().getLibraries());
-		view.selectLibrary(library);
+		updateLibraries(library);
 	}
 	
-	//Workers
+	@Override
+	public void importLibrary(File dir)
+	{
+		Log.info("Creating library: dir="+dir.getAbsolutePath());
+		Library library = LibraryManager.getInstance().importLibrary(dir.getAbsolutePath());
+		if(library == null)
+		{
+			Log.warn("Library was not imported");
+			view.notifyLibraryImportError();
+			return;
+		}
+		
+		updateLibraries(library);
+	}
+	
+	@Override
+	public void manageLibraries()
+	{
+		//TODO
+	}
+	
+	@Override
+	public void addLocalImage()
+	{
+		File imageFile = view.getImageFileInput();
+		if(imageFile != null)
+		{
+			Log.info("Adding local image: "+imageFile.getAbsolutePath());
+			addImage(imageFile, false, true);
+		}
+	}
+	
+	@Override
+	public void addWebImage()
+	{
+		String url = view.getImageUrlInput();
+		if(url != null)
+		{
+			Log.info("Adding web image: "+url);
+			try
+			{
+				addUrlFromDrag(new URL(url));
+			}
+			catch(MalformedURLException e)
+			{
+				Log.error("Invalid URL given: "+url);
+				view.notifyDownloadError();
+			}
+		}
+	}
+	
+	@Override
+	public void addImageFolder()
+	{
+		File dir = view.getImageFolderInput();
+		if(dir != null)
+		{
+			Log.info("Adding image folder: "+dir.getAbsolutePath());
+			if(currentLibrary.getPath().equals(dir.getAbsolutePath()))
+			{
+				Log.error("Library can't add its own directory!");
+				return;
+			}
+			
+			File[] files = dir.listFiles(ImageLoader.IMAGE_FILTER);
+			if(files.length > 0)
+			{
+				for(int n = 0; n < files.length-1; n++)
+					addImage(files[n], false, false);
+				addImage(files[files.length-1], false, true);
+			}
+			else
+			{
+				Log.warn("No images to add");
+			}
+		}
+	}
+	
+	@Override
+	public void setLanguage(String language)
+	{
+		LanguageManager.setLanguage(language);
+	}
+	
+	// Workers
 	
 	private class LibraryLoaderWorker extends SwingWorker<Void, Void>
 	{
@@ -397,10 +472,7 @@ public class GifOrganizer implements UIController
 		@Override
 		protected void done()
 		{
-			view.resetSearch();
-			view.setLibraryLoading(false);
-			view.setImages(currentLibrary.getImages());
-			view.setLibrarySize(currentLibrary.getImages().size());
+			refreshCurrentLibrary();
 		}
 	}
 	
@@ -488,7 +560,7 @@ public class GifOrganizer implements UIController
 		}
 	}
 	
-	//Helpers
+	// Helpers
 	
 	private void useTags(String... tags)
 	{
@@ -500,6 +572,36 @@ public class GifOrganizer implements UIController
 		config.setRecentTags(recentTags.toPropertyString());
 	}
 	
+	private void updateLibraries(Library toSelect)
+	{
+		LibraryManager man = LibraryManager.getInstance();
+		
+		// Save library list
+		Log.info("Saving library list");
+		List<Library> newLibraries = man.getLibraries();
+		config.setLibraries(newLibraries.stream().map((lib) -> lib.getPath()).collect(Collectors.toSet()));
+		
+		// Update UI
+		view.setLibraries(newLibraries);
+		view.selectLibrary(toSelect);
+	}
+	
+	private void refreshCurrentLibrary()
+	{
+		Log.info("Refreshing current library");
+		search.buildSearchFromLibrary(currentLibrary);
+		view.resetSearch();
+		view.setLibraryLoading(false);
+		view.setImages(currentLibrary.getImages());
+		view.setLibrarySize(currentLibrary.getImages().size());
+	}
+	
+	@Override
+	public boolean isValidLibrary(File dir)
+	{
+		return LibraryManager.isLibrary(dir.getAbsolutePath());
+	}
+	
 	private void saveLibrary()
 	{
 		Log.info("Saving library");
@@ -508,9 +610,73 @@ public class GifOrganizer implements UIController
 		LibraryManager.saveLibrary(currentLibrary);
 	}
 	
+	private boolean addImage(File imageFile, boolean moveFile, boolean update)
+	{
+		// Get tags
+		ImageLoader imageLoader = ImageLoader.getInstance(imageFile.getAbsolutePath());
+		ImageFrame[] image = imageLoader.readFull();
+		Set<String> tags = view.getMultiTagInput(image, recentTags);
+		if(tags == null)
+			// Canceled add
+			return false;
+		
+		// Create image data instance
+		Path source = Paths.get(imageFile.getAbsolutePath());
+		ImageData data = new ImageData(source.toFile().getName());
+		while(currentLibrary.hasImage(data))
+			data.regenId();
+		Path target = currentLibrary.getImagePath(data);
+		
+		Log.info((moveFile ? "Moving" : "Copying")+" image file");
+		Log.info("\tSource: "+source);
+		Log.info("\tTarget: "+target);
+		
+		// Move image to library folder
+		try
+		{
+			if(moveFile)
+				Files.move(source, target);
+			else
+				Files.copy(source, target);
+		}
+		catch(FileAlreadyExistsException e)
+		{
+			Log.error("Failed to move image file: cannot overwrite", e);
+			view.notifyFileRelocateError(moveFile);
+			return false;
+		}
+		catch(Exception e)
+		{
+			Log.error("Failed to move image file", e);
+			view.notifyFileRelocateError(moveFile);
+			return false;
+		}
+		
+		// Set new image tags
+		for(String tag : tags)
+		{
+			tag = tag.trim().toLowerCase();
+			data.addTag(tag);
+		}
+		useTags(tags.toArray(new String[0]));
+		
+		// Add image to library index
+		data.setThumbnail(ImageLoader.getThumbnail(currentLibrary, data.getId(), data.getPath()));
+		currentLibrary.addImage(data);
+		view.addImage(data);
+		
+		if(update)
+		{
+			saveLibrary();
+			refreshCurrentLibrary();
+		}
+		
+		return true;
+	}
+	
 	private ImageData createImage(File file, Library library)
 	{
-		ImageData data = new ImageData(file.toPath(), file.getName());
+		ImageData data = new ImageData(file.getName());
 		data.setThumbnail(ImageLoader.getThumbnail(library, data.getId(), data.getPath()));
 		return data;
 	}
@@ -523,7 +689,39 @@ public class GifOrganizer implements UIController
 		clipboard.setContents(new StringSelection(url), null);
 	}
 	
-	//Accessor methods
+	//// File system access
+	
+	@Override
+	public long getImageLastModified(ImageData image)
+	{
+		Path p = currentLibrary.getImagePath(image);
+		try
+		{
+			return Files.getLastModifiedTime(p).toMillis();
+		}
+		catch(Exception e)
+		{
+			Log.error("Failed to get last modified attribute for "+p.toString(), e);
+			return -1;
+		}
+	}
+	
+	@Override
+	public long getImageSize(ImageData image)
+	{
+		Path p = currentLibrary.getImagePath(image);
+		try
+		{
+			return Files.size(p);
+		}
+		catch(Exception e)
+		{
+			Log.error("Failed to get file size attribute for "+p.toString(), e);
+			return -1;
+		}
+	}
+	
+	// Accessor methods
 	
 	public GifOrganizerUI getView()
 	{

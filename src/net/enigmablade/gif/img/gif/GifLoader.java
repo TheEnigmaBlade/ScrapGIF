@@ -20,7 +20,7 @@ public class GifLoader extends ImageLoader
 	@Override
 	protected ImageFrame[] read(String path, boolean onlyFirstFrame)
 	{
-		Log.info("Reading GIF: "+path);
+		Log.debug("Reading GIF: "+path);
 		ArrayList<ImageFrame> frames = new ArrayList<ImageFrame>(2);
 		
 		ImageReader reader = ImageIO.getImageReadersByFormatName("gif").next();

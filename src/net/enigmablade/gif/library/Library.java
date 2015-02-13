@@ -1,12 +1,13 @@
 package net.enigmablade.gif.library;
 
-import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.jsonic.*;
 
 public class Library implements Comparable<Library>
 {
+	private int version;
 	private String id, name, path;
 	private Map<String, ImageData> images;
 	private Set<String> tags;
@@ -16,6 +17,7 @@ public class Library implements Comparable<Library>
 	
 	public Library(String name, String path)
 	{
+		this.version = LibraryManager.LATEST_VERSION;
 		this.id = Long.toString(path.hashCode(), 36);
 		this.name = name;
 		this.path = path;
@@ -26,8 +28,9 @@ public class Library implements Comparable<Library>
 		unloadedImages = null;
 	}
 	
-	public Library(String id, String name, String path, JsonArray unloadedImages)
+	public Library(int version, String id, String name, String path, JsonArray unloadedImages)
 	{
+		this.version = version;
 		this.id = id;
 		this.name = name;
 		this.path = path;
@@ -36,6 +39,11 @@ public class Library implements Comparable<Library>
 		
 		loaded = false;
 		this.unloadedImages = unloadedImages;
+	}
+	
+	public int getVersion()
+	{
+		return version;
 	}
 	
 	public String getId()
@@ -77,6 +85,10 @@ public class Library implements Comparable<Library>
 				images.get(key).destroy();
 			images.clear();
 		}
+		else
+		{
+			unloadedImages = null;
+		}
 	}
 	
 	protected JsonArray getUnloadedImages()
@@ -106,14 +118,21 @@ public class Library implements Comparable<Library>
 	
 	//Utilities
 	
-	public String getImagePath(String path)
+	public Path getImagePath(String path)
 	{
-		return this.path+File.separator+path;
+		//return this.path+File.separator+path;
+		return Paths.get(this.path, path);
 	}
 	
-	public String getImagePath(ImageData image)
+	public Path getImagePath(ImageData image)
 	{
-		return this.path+File.separator+image.getPath();
+		//return this.path+File.separator+image.getPath();
+		return Paths.get(path, image.getPath());
+	}
+	
+	public Path resolveImagePath(ImageData image)
+	{
+		return Paths.get(path, image.getPath());
 	}
 	
 	//Overrides

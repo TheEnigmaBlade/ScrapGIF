@@ -10,6 +10,7 @@ public class DraggableFlowLayout extends AbstractLayoutManager
 	
 	private int maxWidth, maxHeight;
 	
+	@SuppressWarnings("unused")
 	private int dragIndex = -1;
 	
 	public DraggableFlowLayout()

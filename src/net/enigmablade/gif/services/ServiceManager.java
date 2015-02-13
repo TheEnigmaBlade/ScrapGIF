@@ -1,45 +1,103 @@
 package net.enigmablade.gif.services;
 
-import java.io.*;
-import java.util.function.*;
+import java.util.*;
 import com.alee.log.*;
+import com.alee.utils.*;
 import net.enigmablade.gif.img.*;
-import net.enigmablade.gif.library.*;
-import net.enigmablade.gif.services.imgur.*;
 import net.enigmablade.gif.util.*;
 
 public abstract class ServiceManager
 {
-	private static ServiceManager imgur;
-	
-	public static ServiceManager getInstance(String type, String imagePath)
+	public static final Map<String, Service> supportedServices;
+	static
 	{
-		//TODO: image type and size checks
-		if(imgur == null)
-			imgur = new Imgur();
-		return imgur;
+		supportedServices = new HashMap<>();
+		addService("net.enigmablade.gif.services.imgur.Imgur");
+		addService("net.enigmablade.gif.services.gfycat.Gfycat");
+		addService("net.enigmablade.gif.services.pomfse.PomfSe");
 	}
 	
-	public static String createUrl(ServiceLink link)
+	protected static void addService(String className)
 	{
-		ServiceManager manager = ServiceManager.getInstance(link.getType(), null);
-		return manager.createUrl(link.getId());
-	}
-	
-	//Manager stuff
-	
-	public void upload(Library library, ImageData image, TriConsumer<ServiceError, ImageData, ServiceLink> doneCallback, Consumer<Integer> progressCallback)
-	{
-		Log.info("Uploading image");
-		File imageFile = new File(library.getImagePath(image.getPath()));
-		if(imageFile.exists() && imageFile.isFile())
+		try
 		{
-			ServiceManager manager = getInstance(null, image.getPath());
-			manager.upload(imageFile, image, doneCallback, progressCallback);
+			Service service = ReflectUtils.createInstance(className);
+			if(!supportedServices.containsKey(service.getId()))
+				supportedServices.put(service.getId(), service);
+		}
+		catch(Exception e)
+		{
+			Log.error("Failed to create instance of image loader", e);
 		}
 	}
 	
-	public abstract void upload(File file, ImageData image, TriConsumer<ServiceError, ImageData, ServiceLink> doneCallback, Consumer<Integer> progressCallback);
+	public static Service getService(String preferred, ImageData imageData, FileSystemAccessor fileSystem)
+	{
+		return getService(Collections.singletonList(preferred), imageData, fileSystem);
+	}
 	
-	public abstract String createUrl(String id);
+	public static Service getService(List<String> preferred, ImageData imageData, FileSystemAccessor fileSystem)
+	{
+		// Search preferred services
+		for(String pref : preferred)
+		{
+			Service service = supportedServices.get(pref);
+			
+			// Check image parameters if we need to
+			if(imageData != null)
+			{
+				// Check the preferred service if found
+				if(service != null)
+				{
+					if(service.accepts(imageData, fileSystem))
+						return service;
+				}
+			}
+			else
+			{
+				return service;
+			}
+		}
+		
+		// Find another service
+		if(imageData != null)
+		{
+			for(Service s2 : supportedServices.values())
+			{
+				if(s2.accepts(imageData, fileSystem))
+					return s2;
+			}
+		}
+		
+		return null;
+	}
+	
+	public static Collection<Service> getServices()
+	{
+		return Collections.unmodifiableSet(new HashSet<Service>(supportedServices.values()));
+	}
+	
+	/*public ServiceError upload(String preferredService, Library library, ImageData image, TriConsumer<ServiceError, ImageData, ServiceLink> doneCallback, Consumer<Integer> progressCallback)
+	{
+		Log.info("Uploading image");
+		File imageFile = library.getImagePath(image.getPath()).toFile();
+		if(imageFile.exists() && imageFile.isFile())
+		{
+			Service manager = getService(preferredService, image);
+			if(manager == null)
+				return ServiceError.NO_SERVICE;
+			manager.upload(imageFile, image, doneCallback, progressCallback);
+			return ServiceError.NONE;
+		}
+		
+		return ServiceError.NO_FILE;
+	}*/
+	
+	public static String createUrl(ServiceLink link)
+	{
+		Service manager = ServiceManager.getService(link.getService(), null, null);
+		if(manager == null)
+			return null;
+		return manager.createUrl(link);
+	}
 }

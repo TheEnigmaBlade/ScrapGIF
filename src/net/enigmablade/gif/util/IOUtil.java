@@ -1,9 +1,9 @@
 package net.enigmablade.gif.util;
 
+import java.awt.*;
 import java.io.*;
 import java.net.*;
 import java.nio.channels.*;
-import java.nio.file.*;
 import com.alee.log.*;
 
 public class IOUtil
@@ -28,12 +28,6 @@ public class IOUtil
 	
 	public static boolean writeFile(File file, String contents)
 	{
-		if(!Files.isWritable(file.toPath()))
-		{
-			Log.error("File isn't writable: "+file.getPath());
-			return false;
-		}
-		
 		try(PrintStream out = new PrintStream(setupWrite(file)))
 		{
 			out.print(contents);
@@ -64,6 +58,8 @@ public class IOUtil
 		}
 	}
 	
+	// Conversions
+	
 	public static double bytesToKilobytes(long bytes)
 	{
 		return bytes / 1024.0;
@@ -72,5 +68,32 @@ public class IOUtil
 	public static double bytesToMegabytes(long bytes)
 	{
 		return bytesToKilobytes(bytes) / 1024;
+	}
+	
+	public static long kilobytesToBytes(double kilobytes)
+	{
+		return (long)(kilobytes * 1024);
+	}
+	
+	public static long megabytesToBytes(double megabytes)
+	{
+		return kilobytesToBytes(megabytes * 1024);
+	}
+	
+	// Other
+	
+	public static void openWebsite(String url)
+	{
+		if(Desktop.isDesktopSupported())
+		{
+			try
+			{
+				Desktop.getDesktop().browse(new URL(url).toURI());
+			}
+			catch(Exception e)
+			{
+				Log.error("Failed to open website: "+url, e);
+			}
+		}
 	}
 }

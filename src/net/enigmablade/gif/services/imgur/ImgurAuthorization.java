@@ -15,6 +15,7 @@ public class ImgurAuthorization
 		return INSTANCE;
 	}
 	
+	@SuppressWarnings("unused")
 	private String clientId, clientSecret;
 	
 	private ImgurAuthorization()
@@ -24,8 +25,9 @@ public class ImgurAuthorization
 		clientSecret = settings.getProperty("client_secret");
 	}
 	
-	public void authorizeHttpURLConnection(HttpURLConnection conn)
+	public boolean authorizeHttpURLConnection(HttpURLConnection conn)
 	{
 		conn.setRequestProperty("Authorization", "Client-ID "+clientId);
+		return true;
 	}
 }

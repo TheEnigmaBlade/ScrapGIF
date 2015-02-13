@@ -2,21 +2,21 @@ package net.enigmablade.gif.services;
 
 public class ServiceLink
 {
-	private String type;
+	private String service;
 	private String id;
 	
-	public ServiceLink(String type, String id)
+	public ServiceLink(String service, String id)
 	{
-		this.type = type;
+		this.service = service;
 		this.id = id;
 	}
 	
-	public String getType()
+	public String getService()
 	{
-		return type;
+		return service;
 	}
 	
-	public String getId()
+	public String getFile()
 	{
 		return id;
 	}

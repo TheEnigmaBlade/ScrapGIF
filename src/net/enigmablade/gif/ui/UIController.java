@@ -8,7 +8,7 @@ import net.enigmablade.gif.library.*;
 
 public interface UIController
 {
-	//Main UI
+	// Main UI
 	
 	public void setLibrary(Library library);
 	
@@ -18,13 +18,13 @@ public interface UIController
 	
 	public void openFileSystem(ImageData image);
 	
-	//Tagging
+	// Tagging
 	
 	public void tagImage(ImageData data);
 	
 	public void starImage(ImageData data);
 	
-	//Searching
+	// Searching
 	
 	public void setSearchFavorites(String currentQuery, boolean onlyFavs);
 	
@@ -32,15 +32,41 @@ public interface UIController
 	
 	public void removedFromSearchQuery(String newQuery, boolean onEnd, boolean onlyFavs);
 	
-	//Menu bar
+	// Library
 	
 	public void createLibrary(File dir, String name);
 	
-	//Other
+	public void createLibraryFrom(File dir, String name);
+	
+	public void importLibrary(File dir);
+	
+	public boolean isValidLibrary(File dir);
+	
+	public void manageLibraries();
+	
+	// Images
+	
+	public void addLocalImage();
+	
+	public void addWebImage();
+	
+	public void addImageFolder();
+	
+	// Settings
+	
+	public void setLanguage(String language);
+	
+	// Other
 	
 	public void close();
 	
 	public void addFilesFromDrag(List<File> files);
 	
 	public void addUrlFromDrag(URL url);
+	
+	// Information
+	
+	public long getImageLastModified(ImageData image);
+	
+	public long getImageSize(ImageData image);
 }

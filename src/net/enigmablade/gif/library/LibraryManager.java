@@ -14,6 +14,7 @@ public class LibraryManager
 {
 	private static final String SETTINGS_DIR = "config";
 	private static final String SETTINGS_FILE = "library.json";
+	protected static final int LATEST_VERSION = 2;
 	
 	private static LibraryManager INSTANCE = new LibraryManager(Collections.<String>emptySet());
 	
@@ -29,7 +30,7 @@ public class LibraryManager
 	
 	private Map<String, Library> libraries;
 	
-	//Loading
+	// Loading
 	
 	public LibraryManager(Set<String> libraryPaths)
 	{
@@ -37,37 +38,42 @@ public class LibraryManager
 		
 		for(String libraryPath : libraryPaths)
 		{
-			File libraryFile = getLibraryConfig(libraryPath);
-			
-			// File doesn't exist
-			if(libraryFile == null)
+			Library library = createLibrary(libraryPath);
+			if(library != null)
 			{
-				Log.error("Library file doesn't exist: "+libraryPath);
-				continue;
-			}
-			
-			// Load and parse JSON contents
-			try
-			{
-				JsonObject libraryObj = JsonParser.parseObject(libraryFile, false);
-				Library library = loadLibrary(libraryObj);
-				if(library != null)
-				{
-					Log.info("Loaded library: "+library.getName());
-					libraries.put(library.getId(), library);
-				}
-			}
-			catch(IOException e)
-			{
-				Log.error("Failed to load library file", e);
-				continue;
-			}
-			catch(JsonParseException e)
-			{
-				Log.error("Failed to parse library file", e);
-				continue;
+				Log.info("Loaded library: "+library.getName());
+				libraries.put(library.getId(), library);
 			}
 		}
+	}
+	
+	private static Library createLibrary(String libraryPath)
+	{
+		File libraryFile = getLibraryConfig(libraryPath);
+		
+		// File doesn't exist
+		if(libraryFile == null || !libraryFile.exists())
+		{
+			Log.error("Library file doesn't exist: "+libraryPath);
+			return null;
+		}
+		
+		// Load and parse JSON contents
+		try
+		{
+			JsonObject libraryObj = JsonParser.parseObject(libraryFile, false);
+			return loadLibrary(libraryObj);
+		}
+		catch(IOException e)
+		{
+			Log.error("Failed to load library file", e);
+		}
+		catch(JsonParseException e)
+		{
+			Log.error("Failed to parse library file", e);
+		}
+		
+		return null;
 	}
 	
 	private static File getLibraryConfig(String libraryPath)
@@ -87,14 +93,18 @@ public class LibraryManager
 		}
 		
 		int version = libraryObj.getInt("version");
-		if(version == 1)
+		if(version <= 2)
 		{
 			String id = libraryObj.getString("id");
 			String name = libraryObj.getString("name");
 			String path = libraryObj.getString("path");
 			JsonArray images = libraryObj.getArray("images");
 			
-			return new Library(id, name, path, images);
+			return new Library(version, id, name, path, images);
+		}
+		else
+		{
+			Log.warn("Invalid library version: "+version);
 		}
 		
 		return null;
@@ -103,7 +113,14 @@ public class LibraryManager
 	public static void loadLibrary(Library library)
 	{
 		Log.info("Loading library");
-		for(JsonIterator it = library.getUnloadedImages().iterator(); it.hasNext();)
+		JsonArray unloaded = library.getUnloadedImages();
+		if(unloaded == null)
+		{
+			Library newLib = createLibrary(library.getPath());
+			unloaded = newLib.getUnloadedImages();
+		}
+		
+		for(JsonIterator it = unloaded.iterator(); it.hasNext();)
 		{
 			JsonObject imageObj = it.nextObject();
 			ImageData data = createItem(library, imageObj);
@@ -121,7 +138,6 @@ public class LibraryManager
 	{
 		String id = obj.getString("id");
 		String shortPath = obj.getString("path");
-		Path path = new File(library.getImagePath(shortPath)).toPath();
 		boolean starred = obj.getBoolean("starred");
 		
 		List<String> tags = new ArrayList<>();
@@ -132,9 +148,9 @@ public class LibraryManager
 		List<ServiceLink> links = new ArrayList<>();
 		JsonArray linksA = obj.getArray("links");
 		for(JsonIterator it = linksA.iterator(); it.hasNext();)
-			links.add(createLink(it.nextObject()));
+			links.add(createLink(library, it.nextObject()));
 		
-		File file = new File(library.getImagePath(shortPath));
+		File file = library.getImagePath(shortPath).toFile();
 		if(!file.exists() || !file.isFile())
 		{
 			Log.error("Bad file: "+file.getAbsolutePath());
@@ -145,17 +161,27 @@ public class LibraryManager
 		if(thumbnail == null)
 			return null;
 		
-		return new ImageData(id, path, shortPath, tags, starred, links, thumbnail);
+		return new ImageData(id, shortPath, tags, starred, links, thumbnail);
 	}
 	
-	private static ServiceLink createLink(JsonObject obj)
+	private static ServiceLink createLink(Library library, JsonObject obj)
 	{
-		String type = obj.getString("type");
-		String id = obj.getString("id");
-		return new ServiceLink(type, id);
+		int ver = library.getVersion();
+		if(ver == 1)
+		{
+			String type = obj.getString("type");
+			String id = obj.getString("id");
+			return new ServiceLink("imgur", id+"."+type);
+		}
+		else
+		{
+			String host = obj.getString("host");
+			String file = obj.getString("file");
+			return new ServiceLink(host, file);
+		}
 	}
 	
-	//Saving
+	// Saving
 	
 	public static boolean saveLibrary(Library library)
 	{
@@ -163,7 +189,7 @@ public class LibraryManager
 		
 		JsonObject libraryObj = new JsonObject();
 		libraryObj.put("type", "library");
-		libraryObj.put("version", 1);
+		libraryObj.put("version", LATEST_VERSION);
 		libraryObj.put("id", library.getId());
 		libraryObj.put("name", library.getName());
 		libraryObj.put("path", library.getPath());
@@ -199,8 +225,8 @@ public class LibraryManager
 	private static JsonObject createLinkJson(ServiceLink link)
 	{
 		JsonObject o = new JsonObject();
-		o.put("type", link.getType());
-		o.put("id", link.getId());
+		o.put("host", link.getService());
+		o.put("file", link.getFile());
 		return o;
 	}
 	
@@ -210,7 +236,7 @@ public class LibraryManager
 		return IOUtil.writeFile(libraryFile, libraryObj.getJSON());
 	}
 	
-	//Accessor methods
+	// Accessors
 	
 	public List<Library> getLibraries()
 	{
@@ -231,5 +257,32 @@ public class LibraryManager
 	{
 		libraries.put(library.getId(), library);
 		saveLibrary(library);
+	}
+	
+	public Library importLibrary(String libraryPath)
+	{
+		Log.info("Importing library: dir="+libraryPath);
+		
+		Library library = createLibrary(libraryPath);
+		if(library != null)
+		{
+			Log.info("Loaded library: "+library.getName());
+			libraries.put(library.getId(), library);
+		}
+		return library;
+	}
+	
+	// Helpers
+	
+	public static boolean isLibrary(String libraryPath)
+	{
+		File libraryFile = getLibraryConfig(libraryPath);
+		return libraryFile == null || !libraryFile.exists();
+	}
+	
+	public static boolean isValidLibraryName(String name)
+	{
+		//TODO
+		return true;
 	}
 }

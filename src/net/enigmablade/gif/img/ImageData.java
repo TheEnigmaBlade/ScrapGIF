@@ -1,27 +1,24 @@
 package net.enigmablade.gif.img;
 
 import java.awt.image.*;
-import java.nio.file.*;
 import java.util.*;
-import com.alee.log.*;
 import net.enigmablade.gif.services.*;
 
 public class ImageData
 {
 	private String id;
-	private Path path;
-	private String shortPath;
+	private String fileName;
 	private List<String> tags;
 	private boolean starred;
 	private List<ServiceLink> links;
 	
 	private BufferedImage thumbnail;
 	
-	public ImageData(Path path, String shortPath)
+	public ImageData(String fileName)
 	{
-		this.path = path;
-		genId(shortPath);
-		this.shortPath = id+shortPath.substring(shortPath.lastIndexOf('.'));
+		this.fileName = fileName;
+		genId(fileName);
+		this.fileName = id+'.'+getType();
 		
 		this.tags = new ArrayList<>();
 		this.starred = false;
@@ -29,11 +26,10 @@ public class ImageData
 		this.thumbnail = null;
 	}
 	
-	public ImageData(String id, Path path, String shortPath, List<String> tags, boolean starred, List<ServiceLink> links, BufferedImage thumbnail)
+	public ImageData(String id, String fileName, List<String> tags, boolean starred, List<ServiceLink> links, BufferedImage thumbnail)
 	{
 		this.id = id;
-		this.path = path;
-		this.shortPath = shortPath;
+		this.fileName = fileName;
 		this.tags = tags;
 		this.starred = starred;
 		this.thumbnail = thumbnail;
@@ -42,7 +38,8 @@ public class ImageData
 	
 	public void destroy()
 	{
-		thumbnail.flush();
+		if(thumbnail != null)
+			thumbnail.flush();
 	}
 	
 	// Accessors
@@ -54,7 +51,12 @@ public class ImageData
 	
 	public String getPath()
 	{
-		return shortPath;
+		return fileName;
+	}
+	
+	public String getType()
+	{
+		return fileName.substring(fileName.indexOf('.')+1).toLowerCase();
 	}
 	
 	public BufferedImage getThumbnail()
@@ -109,35 +111,19 @@ public class ImageData
 		return thumbnail.getWidth();
 	}
 	
+	public int getWidth(int height)
+	{
+		return (int)(getAspectRatio()*height);
+	}
+	
 	public int getHeight()
 	{
 		return thumbnail.getHeight();
 	}
 	
-	public long getLastModified()
+	public double getAspectRatio()
 	{
-		try
-		{
-			return Files.getLastModifiedTime(path).toMillis();
-		}
-		catch(Exception e)
-		{
-			Log.error("Failed to get last modified attribute for "+path.toString(), e);
-			return -1;
-		}
-	}
-	
-	public long getSize()
-	{
-		try
-		{
-			return Files.size(path);
-		}
-		catch(Exception e)
-		{
-			Log.error("Failed to get file size attribute for "+path.toString(), e);
-			return -1;
-		}
+		return 1.0*getWidth()/getHeight();
 	}
 	
 	// Helpers

@@ -1,0 +1,103 @@
+<Dictionary name="GIF Organizer" prefix="giforg">
+
+	<!-- General -->
+	<record key="title">
+		<value lang="en">ScrapGIF</value>
+		<value lang="jp">スクラープGIF</value>
+	</record>
+	
+	<!-- Menu bar -->
+	<Dictionary prefix="menu">
+		<!-- Library menu -->
+		<Dictionary prefix="library">
+			<record key="title">
+				<value lang="en" mnemonic="l">Library</value>
+			</record>
+			<record key="new">
+				<value lang="en" mnemonic="n">Create new...</value>
+			</record>
+			<record key="newfrom">
+				<value lang="en" mnemonic="f">Create from folder...</value>
+			</record>
+			<record key="import">
+				<value lang="en" mnemonic="i">Import...</value>
+			</record>
+			<record key="manage">
+				<value lang="en" mnemonic="m">Manage...</value>
+			</record>
+			<record key="exit">
+				<value lang="en" mnemonic="x">Exit</value>
+			</record>
+		</Dictionary>
+		<!-- Edit menu -->
+		<Dictionary prefix="edit">
+			<record key="title">
+				<value lang="en" mnemonic="e">Edit</value>
+			</record>
+			<record key="add">
+				<value lang="en" mnemonic="a">Add image...</value>
+			</record>
+			<record key="addweb">
+				<value lang="en" mnemonic="w">Add web image...</value>
+			</record>
+			<record key="addfolder">
+				<value lang="en" mnemonic="f">Add folder...</value>
+			</record>
+		</Dictionary>
+		<!-- Settings menu -->
+		<Dictionary prefix="settings">
+			<record key="title">
+				<value lang="en" mnemonic="s">Settings</value>
+			</record>
+			<record key="language" mnemonic="l">
+				<value lang="en">Language</value>
+			</record>
+			<record key="uploadservice" mnemonic="u">
+				<value lang="en">Upload service</value>
+			</record>
+		</Dictionary>
+		<!-- About menu -->
+		<Dictionary prefix="about">
+			<record key="title">
+				<value lang="en" mnemonic="a">About</value>
+			</record>
+			<record key="about">
+				<value lang="en" mnemonic="a">About...</value>
+			</record>
+		</Dictionary>
+	</Dictionary>
+	
+	<!-- Toolbar -->
+	<Dictionary prefix="toolbar">
+		<record key="search">
+			<value lang="en">Search...</value>
+		</record>
+		<record key="favorites">
+			<value lang="en">
+				<text>Starred only</text>
+				<tooltip>Only show starred images</tooltip>
+			</value>
+		</record>
+	</Dictionary>
+	
+	<!-- Notifications -->
+	<Dictionary prefix="notification">
+		<Dictionary prefix="service">
+			<record key="no_service">
+				<value lang="en">Upload failed: no supported service is available.</value>
+			</record>
+			<record key="no_file">
+				<value lang="en">Upload failed: the file wasn't found.</value>
+			</record>
+			<record key="connection">
+				<value lang="en">Upload failed: there was a problem with your internets.</value>
+			</record>
+			<record key="unexpected">
+				<value lang="en">Upload failed: an unexpected error occurred.</value>
+			</record>
+			<record key="server">
+				<value lang="en">Upload failed: the server returned an error.</value>
+			</record>
+		</Dictionary>
+	</Dictionary>
+</Dictionary>

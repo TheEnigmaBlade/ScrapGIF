@@ -4,11 +4,14 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import net.enigmablade.gif.img.*;
+import net.enigmablade.gif.ui.*;
 import net.enigmablade.gif.ui.components.web.*;
 import net.enigmablade.gif.ui.layouts.*;
 
 public class ItemPanel extends CustomWebPanel
 {
+	private UIController controller;
+	
 	//Components
 	
 	/*private Component dragComponent;
@@ -26,11 +29,14 @@ public class ItemPanel extends CustomWebPanel
 	//Data
 	
 	private Map<String, ItemImage> itemsById;
+	private ItemSize itemSize = ItemSize.NORMAL;
 	
 	//Initialization
 	
-	public ItemPanel()
+	public ItemPanel(UIController controller)
 	{
+		this.controller = controller;
+		
 		setFocusable(true);
 		setMinimumWidth(0);
 		setPreferredWidth(0);
@@ -178,7 +184,7 @@ public class ItemPanel extends CustomWebPanel
 	
 	public Component addImage(ImageData data)
 	{
-		ItemImage image = new ItemImage(data);
+		ItemImage image = new ItemImage(controller, data, itemSize);
 		image.addMouseListener(itemMouseListener);
 		image.addMouseMotionListener(itemMouseMotionListener);
 		
@@ -235,6 +241,18 @@ public class ItemPanel extends CustomWebPanel
 	public int getNumImages()
 	{
 		return itemsById.size();
+	}
+	
+	public void setItemSize(ItemSize itemSize)
+	{
+		Objects.requireNonNull(itemSize);
+		
+		if(this.itemSize != itemSize)
+		{
+			this.itemSize = itemSize;
+			for(ItemImage img : itemsById.values())
+				img.setSize(itemSize);
+		}
 	}
 	
 	public void setItemMouseListener(MouseListener listener)

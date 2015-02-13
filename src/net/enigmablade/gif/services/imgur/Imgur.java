@@ -1,36 +1,65 @@
 package net.enigmablade.gif.services.imgur;
 
-import java.io.*;
-import java.util.function.*;
-import net.enigmablade.gif.img.*;
+import java.net.*;
+import java.util.*;
+import com.alee.log.*;
 import net.enigmablade.gif.services.*;
 import net.enigmablade.gif.util.*;
+import net.enigmablade.jsonic.*;
 
-public class Imgur extends ServiceManager
+public class Imgur extends Service
 {
-	@Override
-	public void upload(File file, ImageData image, TriConsumer<ServiceError, ImageData, ServiceLink> doneCallback, Consumer<Integer> progressCallback)
+	public Imgur()
 	{
-		new ImgurUploadTask(file) {
-			@Override
-			protected void done(String result)
-			{
-				ServiceLink link = result != null ? link = new ServiceLink("imgur", result) : null;
-				doneCallback.accept(error, image, link);
-			}
-			
-			@Override
-			protected void progressed(int val)
-			{
-				System.out.println("Progress: "+val);
-				progressCallback.accept(val);
-			}
-		}.execute();
+		super("imgur", "Imgur", "https://api.imgur.com/3/image", null);
+		setFileTypes("gif", "gifv");
+		setMaxFileSize(IOUtil.megabytesToBytes(50));
 	}
 	
 	@Override
-	public String createUrl(String id)
+	protected boolean authorize(HttpURLConnection connection)
 	{
-		return "http://i.imgur.com/"+id+".gifv";
+		ImgurAuthorization.getInstance().authorizeHttpURLConnection(connection);
+		return true;
+	}
+	
+	@Override
+	protected String handleResult(HttpURLConnection conn, String response)
+	{
+		checkCredits(conn);
+		
+		JsonObject root = JsonParser.parseObject(response);
+		String link = root.getObject("data").getString("link");
+		return link.substring(link.lastIndexOf('/'));
+	}
+	
+	@Override
+	protected ServiceError handleError(HttpURLConnection conn, String response)
+	{
+		checkCredits(conn);
+		
+		Log.error("Response: "+response);
+		return ServiceError.SERVER;
+	}
+	
+	private void checkCredits(HttpURLConnection conn)
+	{
+		Log.info("Client credits: "+conn.getHeaderField("X-RateLimit-ClientRemaining")+"/"+conn.getHeaderField("X-RateLimit-ClientLimit"));
+		Log.info("User credits:   "+conn.getHeaderField("X-RateLimit-UserRemaining")+"/"+conn.getHeaderField("X-RateLimit-UserLimit"));
+	}
+	
+	@Override
+	public String createUrl(ServiceLink link)
+	{
+		Objects.requireNonNull(link);
+		if(!getId().equals(link.getService()))
+			return null;
+		return "http://i.imgur.com/"+link.getFile();
+	}
+
+	@Override
+	protected Map<String, String> getHeaders()
+	{
+		return null;
 	}
 }

@@ -78,7 +78,7 @@ public class MultiTagDialog extends WebDialog
 		mikuList.setCellRenderer(new CustomWebListCellRenderer());
 		hatsuneMiku.setViewportView(mikuList);
 		
-		imagePanel = new ItemImage(null);
+		imagePanel = new ItemImage(null, null, ItemSize.SMALL);
 		
 		kagamineLen = new CenterPanel(imagePanel);
 		kagamineLen.setUndecorated(false);

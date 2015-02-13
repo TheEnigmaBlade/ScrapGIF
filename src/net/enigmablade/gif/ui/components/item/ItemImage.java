@@ -9,8 +9,7 @@ import java.util.function.*;
 import java.util.stream.*;
 import javax.swing.*;
 import com.alee.extended.layout.*;
-import com.alee.extended.panel.*;
-import com.alee.laf.label.*;
+import com.alee.extended.progress.*;
 import com.alee.laf.panel.*;
 import com.alee.log.*;
 import com.alee.managers.language.data.*;
@@ -34,16 +33,19 @@ public class ItemImage extends CustomWebOverlay
 		sizeFormat.applyPattern("#0.0#");
 	}
 	
+	private UIController controller;
 	private ImageData data;
 	
 	private WebPanel imagePanel;
-	private static WebPanel loadingOverlay;
+	private WebProgressOverlay loadOverlay;
+	//private static WebPanel loadingOverlay;
 	private static WebPanel menuOverlay;
 	private static WebValueLabel nameLabel, dateLabel, sizeLabel, uploadedLabel, tagsLabel;
 	private static CustomWebButton menuUpload, menuFolder, menuTags, menuStar;
 	private static Consumer<ImageData> uploadAction, folderAction, tagAction, starAction;
 	
 	private ImageFrame[] frames;
+	private ItemSize size;
 	private boolean menuOpen = false;
 	
 	private Animator animator;
@@ -51,13 +53,13 @@ public class ItemImage extends CustomWebOverlay
 	
 	//Initialization
 	
-	public ItemImage(ImageData data)
+	public ItemImage(UIController controller, ImageData data, ItemSize size)
 	{
+		this.controller = controller;
 		this.data = data;
 		this.frames = null;
-		
-		if(data != null)
-			setPreferredSize(Math.max(data.getWidth(), GifConstants.MIN_IMAGE_WIDTH), data.getHeight());
+		setSize(size);
+			
 		initComponents();
 		initListeners();
 	}
@@ -75,8 +77,8 @@ public class ItemImage extends CustomWebOverlay
 				int imageX = 0, imageW = getWidth();
 				if(data != null)
 				{
-					imageX = (getWidth() - data.getWidth())/2;
-					imageW = data.getWidth();
+					imageW = data.getWidth(size.getSize());
+					imageX = (getWidth() - imageW)/2;
 				}
 				
 				g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, GifConstants.previewInterpolation);
@@ -84,6 +86,12 @@ public class ItemImage extends CustomWebOverlay
 			}
 		};
 		setComponent(imagePanel);
+		
+		loadOverlay = new WebProgressOverlay();
+		loadOverlay.setConsumeEvents(false);
+		loadOverlay.setProgressWidth(size.getLoadSize());
+		loadOverlay.setProgressColor(imagePanel.getBackground());
+		loadOverlay.setSpeed(2);
 	}
 	
 	private void initListeners()
@@ -101,15 +109,15 @@ public class ItemImage extends CustomWebOverlay
 	public static void initStaticComponents()
 	{
 		// Create buttons
-		WebLabel loader = new WebLabel(new ImageIcon("resources/loader.gif"));
+		//WebLabel loader = new WebLabel(GifConstants.loaderAnimation);
 		//loader.setPreferredSize(new Dimension(100, 48));
 		//loader.setOpaque(false);
 		//loader.setTransparency(0.8f);
 		
-		loadingOverlay = new CenterPanel(loader);
+		//loadingOverlay = new CenterPanel(loader);
 		//overlayPanel.setBackground(new Color(220, 220, 220, 100));
 		//overlayPanel.setOpaque(true);
-		loadingOverlay.setVisible(false);
+		//loadingOverlay.setVisible(false);
 		
 		menuOverlay = new WebPanel() {
 			@Override
@@ -203,18 +211,30 @@ public class ItemImage extends CustomWebOverlay
 	
 	public void setLoading()
 	{
-		Log.info("Starting loading animation");
-		addOverlay(loadingOverlay);
-		loadingOverlay.setVisible(true);
+		Log.debug("Starting loading animation");
+		
+		loadOverlay.setShowLoad(true);
+		setComponent(loadOverlay);
+		loadOverlay.setComponent(imagePanel);
+		revalidate();
+	}
+	
+	public void stopLoading(boolean force)
+	{
+		Log.debug("Stopping loading animation");
+		
+		loadOverlay.setShowLoad(false);
+		if(force)
+			setComponent(imagePanel);
 	}
 	
 	public void startAnimation(ImageFrame[] frames)
 	{
+		Log.debug("Starting GIF animation");
+		
 		this.frames = frames;
 		
-		//Log.info("Starting GIF animation");
-		loadingOverlay.setVisible(false);
-		removeOverlay(loadingOverlay);
+		stopLoading(false);
 		
 		if(!menuOpen)
 		{
@@ -235,9 +255,7 @@ public class ItemImage extends CustomWebOverlay
 	
 	public void stopAnimation()
 	{
-		//Log.info("Stopping GIF animation");
-		loadingOverlay.setVisible(false);
-		removeOverlay(loadingOverlay);
+		Log.debug("Stopping GIF animation");
 		
 		if(animator != null)
 			animator.stopAnimation();
@@ -259,12 +277,14 @@ public class ItemImage extends CustomWebOverlay
 	
 	public void openMenu()
 	{
-		Log.info("Opening item menu for "+data.getId());
+		Log.debug("Opening item menu for "+data.getId());
 		
 		// Setup info
+		long lastModified = controller.getImageLastModified(data);
+		long size = controller.getImageSize(data);
 		nameLabel.setValue(data.getPath());
-		dateLabel.setValue(data.getLastModified() < 0 ? "Unknown" : dateFormat.format(new Date(data.getLastModified())));
-		sizeLabel.setValue(data.getSize() < 0 ? "Unknown" : sizeFormat.format(IOUtil.bytesToMegabytes(data.getSize()))+" MB");
+		dateLabel.setValue(lastModified < 0 ? "Unknown" : dateFormat.format(new Date(lastModified)));
+		sizeLabel.setValue(size < 0 ? "Unknown" : sizeFormat.format(IOUtil.bytesToMegabytes(size))+" MB");
 		uploadedLabel.setValue(data.getLinks().size() > 0);
 		tagsLabel.setValue(data.getTags().stream().collect(Collectors.joining(", ")));
 		
@@ -278,6 +298,9 @@ public class ItemImage extends CustomWebOverlay
 		menuTags.addActionListener(evt -> tagAction.accept(data));
 		menuStar.addActionListener(evt -> starAction.accept(data));
 		
+		stopAnimations();
+		stopLoading(true);
+		
 		menuOpen = true;
 		addOverlay(menuOverlay);
 		menuOverlay.setVisible(true);
@@ -285,7 +308,8 @@ public class ItemImage extends CustomWebOverlay
 	
 	public void closeMenu()
 	{
-		//Log.info("Closing item menu");
+		Log.debug("Closing item menu");
+		
 		menuOpen = false;
 		menuOverlay.setVisible(false);
 		removeOverlay(menuOverlay);
@@ -302,6 +326,15 @@ public class ItemImage extends CustomWebOverlay
 	}
 	
 	//Accessor methods
+	
+	public void setSize(ItemSize size)
+	{
+		this.size = size;
+		if(data != null)
+			setPreferredSize(Math.max(data.getWidth(size.getSize()), GifConstants.MIN_IMAGE_WIDTH), size.getSize());
+		if(loadOverlay != null)
+			loadOverlay.setProgressWidth(size.getLoadSize());
+	}
 	
 	public ImageData getData()
 	{

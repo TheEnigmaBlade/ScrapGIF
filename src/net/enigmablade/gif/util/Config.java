@@ -75,8 +75,7 @@ public class Config extends Properties
 	
 	public void setLibraries(Set<String> libraries)
 	{
-		String paths = libraries.stream().collect(Collectors.joining(";"));
-		setProperty("libraries", paths);
+		setProperty("libraries", libraries.stream().collect(Collectors.joining(";")));
 	}
 	
 	public String getRecentTags()
@@ -87,5 +86,15 @@ public class Config extends Properties
 	public void setRecentTags(String tags)
 	{
 		setProperty("recent_tags", tags);
+	}
+	
+	public List<String> getPreferredServices()
+	{
+		return Arrays.asList(getProperty("pref_service", "").split(";"));
+	}
+	
+	public void setPreferredServices(Set<String> services)
+	{
+		setProperty("pref_service", services.stream().collect(Collectors.joining(";")));
 	}
 }

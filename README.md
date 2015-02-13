@@ -1,4 +1,4 @@
-# FunGIF
+# ScrapGIF
 ### GIF organizer
 
 Because I needed something to organize my massive multi-gigabyte anime GIF collection.
