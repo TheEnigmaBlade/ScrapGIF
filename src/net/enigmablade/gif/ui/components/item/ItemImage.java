@@ -9,10 +9,13 @@ import java.util.function.*;
 import java.util.stream.*;
 import javax.swing.*;
 import com.alee.extended.layout.*;
+import com.alee.extended.panel.*;
 import com.alee.extended.progress.*;
+import com.alee.laf.button.*;
 import com.alee.laf.panel.*;
 import com.alee.log.*;
 import com.alee.managers.language.data.*;
+import com.alee.managers.popup.*;
 import com.alee.managers.tooltip.*;
 import net.enigmablade.gif.*;
 import net.enigmablade.gif.img.*;
@@ -41,17 +44,20 @@ public class ItemImage extends CustomWebOverlay
 	//private static WebPanel loadingOverlay;
 	private static WebPanel menuOverlay;
 	private static WebValueLabel nameLabel, dateLabel, sizeLabel, uploadedLabel, tagsLabel;
-	private static CustomWebButton menuUpload, menuFolder, menuTags, menuStar;
-	private static Consumer<ImageData> uploadAction, folderAction, tagAction, starAction;
+	private static CustomWebButton menuUpload, menuTags, menuStar, menuMore;
+	private static WebButtonPopup menuMorePopup;
+	private static CustomWebButton menuRemove, menuFolder;
+	private static Consumer<ImageData> uploadAction, tagAction, starAction, removeAction, folderAction;
 	
 	private ImageFrame[] frames;
-	private ItemSize size;
+	private boolean isVisible = false;
+	private boolean isSizeSet = false;
 	private boolean menuOpen = false;
 	
 	private Animator animator;
 	private static Deque<ItemImage> animating = new ConcurrentLinkedDeque<>();
 	
-	//Initialization
+	// Initialization
 	
 	public ItemImage(UIController controller, ImageData data, ItemSize size)
 	{
@@ -59,21 +65,25 @@ public class ItemImage extends CustomWebOverlay
 		this.data = data;
 		this.frames = null;
 		setSize(size);
-			
-		initComponents();
+		resetSizeSet();
+		
+		initComponents(size);
 		initListeners();
 	}
 	
-	private void initComponents()
+	private void initComponents(ItemSize size)
 	{
 		imagePanel = new WebPanel() {
 			@Override
 			public void paintComponent(Graphics g)
 			{
 				Graphics2D g2 = (Graphics2D)g;
+				
+				// Fill background
 				g2.setColor(GifConstants.IMAGE_BACKGROUND);
 				g2.fillRect(0, 0, getWidth(), getHeight());
 				
+				// Get image positioning information (adjust if image width is below the min width)
 				int imageX = 0, imageW = getWidth();
 				if(data != null)
 				{
@@ -81,8 +91,15 @@ public class ItemImage extends CustomWebOverlay
 					imageX = (getWidth() - imageW)/2;
 				}
 				
-				g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, GifConstants.previewInterpolation);
-				g2.drawImage((animator == null ? data.getThumbnail() : frames[animator.getFrame()].getImage()), imageX, 0, imageW, getHeight(), null);
+				// Draw a frame from an available animation OR the thumbnail
+				g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, GifConstants.PREVIEW_INTERPOLATION);
+				
+				if(animator != null && frames != null && frames[animator.getFrame()] != null)	// frames shouldn't be null when animator is non-null, but sometimes it was...
+					// Animation
+					g2.drawImage(frames[animator.getFrame()].getImage(), imageX, 0, imageW, getHeight(), null);
+				else if(data != null)
+					// Thumbnail
+					g2.drawImage(data.getThumbnail(), imageX, 0, imageW, getHeight(), null);
 			}
 		};
 		setComponent(imagePanel);
@@ -174,40 +191,75 @@ public class ItemImage extends CustomWebOverlay
 		menuUpload.setDrawFocus(false);
 		menuUpload.setRolloverShine(true);
 		menuOverlay.add(menuUpload, new TableLayoutConstraints(1, 1));
-		menuFolder = new CustomWebButton(GifConstants.folderClosedIcon);
-		menuFolder.setRolloverIcon(GifConstants.folderOpenIcon);
-		menuFolder.setDrawShade(false);
-		menuFolder.setDrawFocus(false);
-		menuFolder.setRolloverShine(true);
-		menuOverlay.add(menuFolder, new TableLayoutConstraints(2, 1));
 		menuTags = new CustomWebButton(GifConstants.tagIcon);
 		menuTags.setRolloverIcon(GifConstants.tagFillIcon);
 		menuTags.setDrawShade(false);
 		menuTags.setDrawFocus(false);
 		menuTags.setRolloverShine(true);
-		menuOverlay.add(menuTags, new TableLayoutConstraints(3, 1));
+		menuOverlay.add(menuTags, new TableLayoutConstraints(2, 1));
 		menuStar = new CustomWebButton(GifConstants.starEnabledIcon);
 		menuStar.setRolloverIcon(GifConstants.starDisabledIcon);
 		menuStar.setDrawShade(false);
 		menuStar.setDrawFocus(false);
 		menuStar.setRolloverShine(true);
-		menuOverlay.add(menuStar, new TableLayoutConstraints(4, 1));
+		menuOverlay.add(menuStar, new TableLayoutConstraints(3, 1));
+		menuMore = new CustomWebButton("...");//GifConstants.moreIcon);
+		menuMore.setFontSize(16);
+		menuMore.setBoldFont();
+		menuMore.setForeground(WebButtonStyle.bottomBgColor.darker());
+		menuMore.setVerticalTextPosition(SwingConstants.TOP);
+		menuMore.setDrawShade(false);
+		menuMore.setDrawFocus(false);
+		menuMore.setRolloverShine(true);
+		menuOverlay.add(menuMore, new TableLayoutConstraints(4, 1));
+		
+		// More buttons
+		menuRemove = new CustomWebButton("Remove image", GifConstants.removeIcon);
+		menuRemove.setHorizontalAlignment(SwingUtilities.LEFT);
+		menuRemove.setDrawShade(false);
+		menuRemove.setDrawFocus(false);
+		menuRemove.setRolloverShine(true);
+		menuRemove.setDrawSides(false, false, false, false);
+		menuRemove.setEnabled(false);
+		
+		menuFolder = new CustomWebButton("Show file", GifConstants.folderClosedIcon);
+		menuFolder.setRolloverIcon(GifConstants.folderOpenIcon);
+		menuFolder.setHorizontalAlignment(SwingUtilities.LEFT);
+		menuFolder.setDrawShade(false);
+		menuFolder.setDrawFocus(false);
+		menuFolder.setRolloverShine(true);
+		menuFolder.setDrawSides(false, false, false, false);
+		
+		menuMorePopup = new WebButtonPopup(menuMore, PopupWay.leftUp);
+		menuMorePopup.setContent(new GroupPanel(0, false, menuRemove, menuFolder));
 		
 		TooltipManager.addTooltip(menuUpload, "Upload image", TooltipWay.up);
-		TooltipManager.addTooltip(menuFolder, "Show in file system", TooltipWay.up);
 		TooltipManager.addTooltip(menuTags, "Add tag", TooltipWay.up);
 		TooltipManager.addTooltip(menuStar, "Toggle star", TooltipWay.up);
+		TooltipManager.addTooltip(menuMore, "More options", TooltipWay.up);
+		
+		TooltipManager.addTooltip(menuRemove, "Remove image from library", TooltipWay.up);
+		TooltipManager.addTooltip(menuFolder, "Show in file system", TooltipWay.up);
 	}
 	
-	public static void initStaticListeners(Consumer<ImageData> uploadAction, Consumer<ImageData> folderAction, Consumer<ImageData> tagAction, Consumer<ImageData> starAction)
+	public static void initStaticListeners(Consumer<ImageData> uploadAction, Consumer<ImageData> tagAction, Consumer<ImageData> starAction, Consumer<ImageData> removeAction, Consumer<ImageData> folderAction)
 	{
 		ItemImage.uploadAction = uploadAction;
-		ItemImage.folderAction = folderAction;
 		ItemImage.tagAction = tagAction;
 		ItemImage.starAction = starAction;
+		ItemImage.removeAction = removeAction;
+		ItemImage.folderAction = folderAction;
 	}
 	
-	//Interaction methods
+	// Interaction methods
+	
+	public boolean updateVisibility()
+	{
+		boolean newVis = isVisibleInScroll();
+		boolean visChange = isVisible != newVis;
+		isVisible = newVis;
+		return visChange;
+	}
 	
 	public void setLoading()
 	{
@@ -232,7 +284,7 @@ public class ItemImage extends CustomWebOverlay
 	{
 		Log.debug("Starting GIF animation");
 		
-		this.frames = frames;
+		this.frames = Objects.requireNonNull(frames);
 		
 		stopLoading(false);
 		
@@ -261,7 +313,9 @@ public class ItemImage extends CustomWebOverlay
 			animator.stopAnimation();
 		animator = null;
 		frames = null;
-		SwingUtilities.invokeLater(() -> repaint());
+		
+		if(isVisible)
+			SwingUtilities.invokeLater(() -> repaint());
 	}
 	
 	public static void stopAnimations()
@@ -294,9 +348,10 @@ public class ItemImage extends CustomWebOverlay
 		menuStar.setRolloverIcon(starred ? GifConstants.starDisabledIcon : GifConstants.starEnabledIcon);
 		
 		menuUpload.addActionListener(evt -> uploadAction.accept(data));
-		menuFolder.addActionListener(evt -> folderAction.accept(data));
 		menuTags.addActionListener(evt -> tagAction.accept(data));
 		menuStar.addActionListener(evt -> starAction.accept(data));
+		menuRemove.addActionListener(evt -> removeAction.accept(data));
+		menuFolder.addActionListener(evt -> folderAction.accept(data));
 		
 		stopAnimations();
 		stopLoading(true);
@@ -315,9 +370,10 @@ public class ItemImage extends CustomWebOverlay
 		removeOverlay(menuOverlay);
 		
 		menuUpload.clearActionListeners();
-		menuFolder.clearActionListeners();
 		menuTags.clearActionListeners();
 		menuStar.clearActionListeners();
+		menuFolder.clearActionListeners();
+		menuRemove.clearActionListeners();
 	}
 	
 	public boolean isMenuOpen()
@@ -325,19 +381,56 @@ public class ItemImage extends CustomWebOverlay
 		return menuOpen;
 	}
 	
-	//Accessor methods
+	// Accessor methods
+	
+	public boolean isVisibleInScroll()
+	{
+		if(!isVisible())
+			return false;
+		
+		return !getVisibleRect().isEmpty();
+	}
 	
 	public void setSize(ItemSize size)
 	{
-		this.size = size;
-		if(data != null)
-			setPreferredSize(Math.max(data.getWidth(size.getSize()), GifConstants.MIN_IMAGE_WIDTH), size.getSize());
-		if(loadOverlay != null)
-			loadOverlay.setProgressWidth(size.getLoadSize());
+		if(!isSizeSet)
+		{
+			if(data != null)
+				setPreferredSize(Math.min(Math.max(data.getWidth(size.getSize()), GifConstants.MIN_IMAGE_WIDTH), GifConstants.MAX_IMAGE_WIDTH), size.getSize());
+			if(loadOverlay != null)
+				loadOverlay.setProgressWidth(size.getLoadSize());
+			isSizeSet = true;
+		}
+	}
+	
+	public void resetSizeSet()
+	{
+		isSizeSet = false;
 	}
 	
 	public ImageData getData()
 	{
 		return data;
+	}
+	
+	// Other
+	
+	@Override
+	public int hashCode()
+	{
+		if(data == null)
+			return super.hashCode();
+		return data.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o)
+	{
+		if(o == null || !(o instanceof ItemImage))
+			return false;
+		ItemImage i = (ItemImage)o;
+		if(data != null)
+			return data.equals(i.data);
+		return super.equals(o);
 	}
 }

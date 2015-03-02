@@ -30,7 +30,7 @@ public class Imgur extends Service
 		
 		JsonObject root = JsonParser.parseObject(response);
 		String link = root.getObject("data").getString("link");
-		return link.substring(link.lastIndexOf('/'));
+		return link.substring(link.lastIndexOf('/')+1);
 	}
 	
 	@Override

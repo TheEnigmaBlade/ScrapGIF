@@ -31,6 +31,8 @@ public class GifOrganizerMain
 	
 	private static void initLog(boolean console)
 	{
+		Log.initialize();
+		
 		System.setProperty("org.slf4j.simpleLogger.logFile", console ? "System.out" : "lastrun.log");
 		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "info");
 		System.setProperty("org.slf4j.simpleLogger.showLogName", "true");
@@ -38,8 +40,6 @@ public class GifOrganizerMain
 		System.setProperty("org.slf4j.simpleLogger.levelInBrackets", "true");
 		System.setProperty("org.slf4j.simpleLogger.showDateTime", "false");
 		System.setProperty("org.slf4j.simpleLogger.showThreadName", "false");
-		
-		Log.initialize();
 	}
 	
 	private static void initLAF()

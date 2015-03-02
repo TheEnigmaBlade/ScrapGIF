@@ -3,6 +3,7 @@ package net.enigmablade.gif.ui.components.item;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
+import java.util.stream.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.ui.*;
 import net.enigmablade.gif.ui.components.web.*;
@@ -182,17 +183,17 @@ public class ItemPanel extends CustomWebPanel
 		};*/
 	}
 	
-	public Component addImage(ImageData data)
+	public ItemImage addImage(ImageData data)
 	{
 		ItemImage image = new ItemImage(controller, data, itemSize);
 		image.addMouseListener(itemMouseListener);
 		image.addMouseMotionListener(itemMouseMotionListener);
 		
 		itemsById.put(image.getData().getId(), image);
-		return super.add(image);
+		return (ItemImage)super.add(image);
 	}
 	
-	public void removeImage(String id)
+	public ItemImage removeImage(String id)
 	{
 		ItemImage image = itemsById.get(id);
 		image.removeMouseListener(itemMouseListener);
@@ -200,6 +201,14 @@ public class ItemPanel extends CustomWebPanel
 		
 		itemsById.remove(image.getData().getId());
 		super.remove(image);
+		return image;
+	}
+	
+	public void updatedThumbnail(ImageData data)
+	{
+		ItemImage image = itemsById.get(data.getId());
+		if(image != null)
+			image.setSize(itemSize);
 	}
 	
 	public void clearImages()
@@ -223,6 +232,13 @@ public class ItemPanel extends CustomWebPanel
 			image.setLoading();
 	}
 	
+	public void stopItemLoading(String id)
+	{
+		ItemImage image = itemsById.get(id);
+		if(image != null)
+			image.stopLoading(false);
+	}
+	
 	public void setItemAnimated(String id, ImageFrame[] frames)
 	{
 		ItemImage image = itemsById.get(id);
@@ -234,6 +250,11 @@ public class ItemPanel extends CustomWebPanel
 	{
 		for(String id : itemsById.keySet())
 			itemsById.get(id).stopAnimation();
+	}
+	
+	public Set<ItemImage> getNonVisible(Set<ItemImage> visible)
+	{
+		return itemsById.values().stream().filter(i -> !visible.contains(i)).collect(Collectors.toSet());
 	}
 	
 	//Accessor methods

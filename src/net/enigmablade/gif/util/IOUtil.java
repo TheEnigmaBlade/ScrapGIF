@@ -4,10 +4,41 @@ import java.awt.*;
 import java.io.*;
 import java.net.*;
 import java.nio.channels.*;
+import java.nio.file.*;
 import com.alee.log.*;
 
 public class IOUtil
 {
+	public static String getFileName(String name)
+	{
+		return name.substring(0, name.lastIndexOf('.'));
+	}
+	
+	public static String getFileName(Path path)
+	{
+		return getFileName(path.toFile());
+	}
+	
+	public static String getFileName(File file)
+	{
+		return getFileName(file.getName());
+	}
+	
+	public static String getFileExtension(String name)
+	{
+		return name.substring(name.lastIndexOf('.')+1);
+	}
+	
+	public static String getFileExtension(Path path)
+	{
+		return getFileExtension(path.toFile());
+	}
+	
+	public static String getFileExtension(File file)
+	{
+		return getFileExtension(file.getName());
+	}
+	
 	public static File setupWrite(File file)
 	{
 		if(!file.exists())

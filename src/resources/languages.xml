@@ -22,18 +22,6 @@
 			<record key="import">
 				<value lang="en" mnemonic="i">Import...</value>
 			</record>
-			<record key="manage">
-				<value lang="en" mnemonic="m">Manage...</value>
-			</record>
-			<record key="exit">
-				<value lang="en" mnemonic="x">Exit</value>
-			</record>
-		</Dictionary>
-		<!-- Edit menu -->
-		<Dictionary prefix="edit">
-			<record key="title">
-				<value lang="en" mnemonic="e">Edit</value>
-			</record>
 			<record key="add">
 				<value lang="en" mnemonic="a">Add image...</value>
 			</record>
@@ -41,7 +29,31 @@
 				<value lang="en" mnemonic="w">Add web image...</value>
 			</record>
 			<record key="addfolder">
-				<value lang="en" mnemonic="f">Add folder...</value>
+				<value lang="en" mnemonic="o">Add folder...</value>
+			</record>
+			<record key="manage">
+				<value lang="en" mnemonic="m">Manage...</value>
+			</record>
+			<record key="export">
+				<value lang="en" mnemonic="e">Export...</value>
+			</record>
+			<record key="exit">
+				<value lang="en" mnemonic="x">Exit</value>
+			</record>
+		</Dictionary>
+		<!-- View menu -->
+		<Dictionary prefix="view">
+			<record key="title">
+				<value lang="en" mnemonic="v">View</value>
+			</record>
+			<record key="imagesize" mnemonic="s">
+				<value lang="en">Image size</value>
+			</record>
+			<record key="showstarred" mnemonic="t">
+				<value lang="en">Show starred only</value>
+			</record>
+			<record key="showuntagged" mnemonic="u">
+				<value lang="en">Show untagged only</value>
 			</record>
 		</Dictionary>
 		<!-- Settings menu -->
@@ -49,11 +61,17 @@
 			<record key="title">
 				<value lang="en" mnemonic="s">Settings</value>
 			</record>
-			<record key="language" mnemonic="l">
-				<value lang="en">Language</value>
+			<record key="checknewimages">
+				<value lang="en" mnemonic="n">Check for new images</value>
+			</record>
+			<record key="imagesize" mnemonic="u">
+				<value lang="en">Image size</value>
 			</record>
 			<record key="uploadservice" mnemonic="u">
 				<value lang="en">Upload service</value>
+			</record>
+			<record key="language" mnemonic="l">
+				<value lang="en">Language</value>
 			</record>
 		</Dictionary>
 		<!-- About menu -->

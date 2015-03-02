@@ -1,6 +1,7 @@
 package net.enigmablade.gif.img.webm;
 
 import java.awt.image.*;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
 import com.alee.log.*;
@@ -20,17 +21,17 @@ public class WebMLoader extends ImageLoader implements IMediaListener
 	private List<ImageFrame> frameBuffer;
 	private boolean frameRead = false;
 	
-	public WebMLoader(String path)
+	public WebMLoader()
 	{
-		super(path);
+		super("webm");
 	}
 	
 	@Override
-	protected ImageFrame[] read(String path, boolean onlyFirstFrame)
+	protected ImageFrame[] loadImage(File file, boolean onlyFirstFrame)
 	{
 		frameBuffer = new LinkedList<>();
 		
-		IMediaReader reader = ToolFactory.makeReader(path);
+		IMediaReader reader = ToolFactory.makeReader(file.getAbsolutePath());
 		reader.setBufferedImageTypeToGenerate(BufferedImage.TYPE_3BYTE_BGR);
 		reader.addListener(this);
 		

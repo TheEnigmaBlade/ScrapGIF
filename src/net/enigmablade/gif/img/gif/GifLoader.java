@@ -12,19 +12,19 @@ import net.enigmablade.gif.img.*;
 
 public class GifLoader extends ImageLoader
 {
-	public GifLoader(String path)
+	public GifLoader()
 	{
-		super(path);
+		super("gif");
 	}
 	
 	@Override
-	protected ImageFrame[] read(String path, boolean onlyFirstFrame)
+	protected ImageFrame[] loadImage(File file, boolean onlyFirstFrame)
 	{
-		Log.debug("Reading GIF: "+path);
+		Log.debug("Reading GIF: "+file.getPath());
 		ArrayList<ImageFrame> frames = new ArrayList<ImageFrame>(2);
 		
 		ImageReader reader = ImageIO.getImageReadersByFormatName("gif").next();
-		try(InputStream stream = new FileInputStream(path))
+		try(InputStream stream = new FileInputStream(file))
 		{
 			reader.setInput(ImageIO.createImageInputStream(stream));
 			
@@ -109,7 +109,7 @@ public class GifLoader extends ImageLoader
 				NodeList children = root.getChildNodes();
 				
 				int delay = Integer.valueOf(gce.getAttribute("delayTime"))*10;
-				if(delay == 0)
+				if(delay <= 10)
 					delay = 100;
 				
 				String disposal = gce.getAttribute("disposalMethod");
@@ -178,6 +178,7 @@ public class GifLoader extends ImageLoader
 				
 				master.flush();
 			}
+			
 			reader.dispose();
 		}
 		catch(FileNotFoundException e)
@@ -188,6 +189,11 @@ public class GifLoader extends ImageLoader
 		catch(IOException e)
 		{
 			Log.error("Failed to load GIF", e);
+			return null;
+		}
+		catch(Exception e)
+		{
+			Log.error("Unknown error when loading GIF", e);
 			return null;
 		}
 		

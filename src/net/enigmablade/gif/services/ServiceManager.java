@@ -8,16 +8,16 @@ import net.enigmablade.gif.util.*;
 
 public abstract class ServiceManager
 {
-	public static final Map<String, Service> supportedServices;
+	public static Map<String, Service> supportedServices;
 	static
 	{
 		supportedServices = new HashMap<>();
-		addService("net.enigmablade.gif.services.imgur.Imgur");
-		addService("net.enigmablade.gif.services.gfycat.Gfycat");
-		addService("net.enigmablade.gif.services.pomfse.PomfSe");
+		registerService("net.enigmablade.gif.services.imgur.Imgur");
+		registerService("net.enigmablade.gif.services.gfycat.Gfycat");
+		registerService("net.enigmablade.gif.services.pomfse.PomfSe");
 	}
 	
-	protected static void addService(String className)
+	public static void registerService(String className)
 	{
 		try
 		{

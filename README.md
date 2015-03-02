@@ -7,4 +7,7 @@ More information coming soon.
 
 ---
 
-Uses Fugue icons by [Yusuke Kamiyamane](http://p.yusukekamiyamane.com/).
+Third-party resources used:
+
+- [Web Look and Feel](http://weblookandfeel.com/)
+- Fugue icons, by [Yusuke Kamiyamane](http://p.yusukekamiyamane.com/).

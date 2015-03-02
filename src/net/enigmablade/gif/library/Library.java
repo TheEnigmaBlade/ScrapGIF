@@ -51,6 +51,14 @@ public class Library implements Comparable<Library>
 		return id;
 	}
 	
+	public void regenId()
+	{
+		int hash = id.hashCode();
+		int k = (int)(Math.random()*Integer.SIZE);
+		hash = (hash >>> k) | (hash << (Integer.SIZE - k));
+		id = Long.toString(Math.abs(hash), 36);
+	}
+	
 	public String getName()
 	{
 		return name;
@@ -103,7 +111,12 @@ public class Library implements Comparable<Library>
 	
 	public boolean hasImage(ImageData image)
 	{
-		return images.containsKey(image.getId());
+		return hasImageId(image.getId());
+	}
+	
+	public boolean hasImageId(String imageId)
+	{
+		return images.containsKey(imageId);
 	}
 	
 	public Set<String> getTags()

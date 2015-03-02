@@ -12,6 +12,8 @@ public interface UIController
 	
 	public void setLibrary(Library library);
 	
+	public void loadThumbnail(ImageData image);
+	
 	public void animateImage(ImageData item);
 	
 	public void uploadImage(ImageData image);
@@ -53,6 +55,8 @@ public interface UIController
 	public void addImageFolder();
 	
 	// Settings
+	
+	public void setCheckNewImages(boolean check);
 	
 	public void setLanguage(String language);
 	

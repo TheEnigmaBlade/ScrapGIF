@@ -16,9 +16,15 @@ public class ImageData
 	
 	public ImageData(String fileName)
 	{
+		this(fileName, false);
+	}
+	
+	public ImageData(String fileName, boolean keepFileName)
+	{
 		this.fileName = fileName;
 		genId(fileName);
-		this.fileName = id+'.'+getType();
+		if(!keepFileName)
+			this.fileName = id+'.'+getType();
 		
 		this.tags = new ArrayList<>();
 		this.starred = false;
@@ -26,13 +32,13 @@ public class ImageData
 		this.thumbnail = null;
 	}
 	
-	public ImageData(String id, String fileName, List<String> tags, boolean starred, List<ServiceLink> links, BufferedImage thumbnail)
+	public ImageData(String id, String fileName, List<String> tags, boolean starred, List<ServiceLink> links)
 	{
 		this.id = id;
 		this.fileName = fileName;
 		this.tags = tags;
 		this.starred = starred;
-		this.thumbnail = thumbnail;
+		this.thumbnail = null;
 		this.links = links;
 	}
 	
@@ -56,7 +62,7 @@ public class ImageData
 	
 	public String getType()
 	{
-		return fileName.substring(fileName.indexOf('.')+1).toLowerCase();
+		return fileName.substring(fileName.lastIndexOf('.')+1).toLowerCase();
 	}
 	
 	public BufferedImage getThumbnail()
@@ -108,6 +114,8 @@ public class ImageData
 	
 	public int getWidth()
 	{
+		if(thumbnail == null)
+			return 0;
 		return thumbnail.getWidth();
 	}
 	
@@ -118,6 +126,8 @@ public class ImageData
 	
 	public int getHeight()
 	{
+		if(thumbnail == null)
+			return 0;
 		return thumbnail.getHeight();
 	}
 	
@@ -141,4 +151,22 @@ public class ImageData
 		hash = (hash >>> k) | (hash << (Integer.SIZE - k));
 		id = Long.toString(Math.abs(hash), 36);
 	}
+	
+	// Other
+	
+	@Override
+	public int hashCode()
+	{
+		return id.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o)
+	{
+		if(o == null || !(o instanceof ImageData))
+			return false;
+		ImageData d = (ImageData)o;
+		return id.equals(d.id);
+	}
 }
+

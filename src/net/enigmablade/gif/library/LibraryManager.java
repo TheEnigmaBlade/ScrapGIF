@@ -1,6 +1,5 @@
 package net.enigmablade.gif.library;
 
-import java.awt.image.*;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
@@ -113,6 +112,8 @@ public class LibraryManager
 	public static void loadLibrary(Library library)
 	{
 		Log.info("Loading library");
+		
+		// Get unloaded image list
 		JsonArray unloaded = library.getUnloadedImages();
 		if(unloaded == null)
 		{
@@ -120,6 +121,7 @@ public class LibraryManager
 			unloaded = newLib.getUnloadedImages();
 		}
 		
+		// Parse image list
 		for(JsonIterator it = unloaded.iterator(); it.hasNext();)
 		{
 			JsonObject imageObj = it.nextObject();
@@ -157,11 +159,7 @@ public class LibraryManager
 			return null;
 		}
 		
-		BufferedImage thumbnail = ImageLoader.getThumbnail(library, id, shortPath);
-		if(thumbnail == null)
-			return null;
-		
-		return new ImageData(id, shortPath, tags, starred, links, thumbnail);
+		return new ImageData(id, shortPath, tags, starred, links);
 	}
 	
 	private static ServiceLink createLink(Library library, JsonObject obj)
@@ -179,6 +177,24 @@ public class LibraryManager
 			String file = obj.getString("file");
 			return new ServiceLink(host, file);
 		}
+	}
+	
+	public static List<File> getUnloadedImages(Library library)
+	{
+		if(!library.isLoaded())
+			return Collections.emptyList();
+		
+		File dir = new File(library.getPath());
+		File[] files = dir.listFiles(ImageLoader.IMAGE_FILTER);
+		
+		List<File> newFiles = new ArrayList<>();
+		for(File file : files)
+		{
+			String maybeId = IOUtil.getFileName(file);
+			if(!library.hasImageId(maybeId))
+				newFiles.add(file);
+		}
+		return newFiles;
 	}
 	
 	// Saving
@@ -253,10 +269,14 @@ public class LibraryManager
 		return library;
 	}
 	
-	public void addLibrary(Library library)
+	public boolean addLibrary(Library library)
 	{
+		if(libraries.containsKey(library.getId()))
+			return false;
+		
 		libraries.put(library.getId(), library);
 		saveLibrary(library);
+		return true;
 	}
 	
 	public Library importLibrary(String libraryPath)
@@ -277,7 +297,7 @@ public class LibraryManager
 	public static boolean isLibrary(String libraryPath)
 	{
 		File libraryFile = getLibraryConfig(libraryPath);
-		return libraryFile == null || !libraryFile.exists();
+		return libraryFile != null && libraryFile.exists();
 	}
 	
 	public static boolean isValidLibraryName(String name)

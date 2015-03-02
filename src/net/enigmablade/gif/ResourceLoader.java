@@ -1,13 +1,15 @@
 package net.enigmablade.gif;
 
 import java.net.*;
+import javax.sound.sampled.*;
 import javax.swing.*;
+import com.alee.log.*;
 
 public class ResourceLoader
 {
 	private static final String RESOURCES = "resources/";
 	private static final String ICONS = "icons/";
-	//private static final String ANIMATIONS = "";
+	private static final String SOUNDS = "sounds/";
 	
 	public static URL getResource(String name)
 	{
@@ -19,8 +21,16 @@ public class ResourceLoader
 		return new ImageIcon(getResource(ICONS+name+".png"));
 	}
 	
-	/*public static ImageIcon loadAnimatedIcon(String name)
+	public static AudioInputStream loadSound(String name)
 	{
-		return new ImageIcon(getResource(ANIMATIONS+name+".gif"));
-	}*/
+		try
+		{
+			return AudioSystem.getAudioInputStream(getResource(SOUNDS+name+".wav"));
+		}
+		catch(Exception e)
+		{
+			Log.error("Failed to load sound file", e);
+			return null;
+		}
+	}
 }

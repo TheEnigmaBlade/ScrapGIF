@@ -6,9 +6,19 @@ import com.alee.laf.button.*;
 
 public class CustomWebButton extends WebButton
 {
+	public CustomWebButton(String text)
+	{
+		super(text);
+	}
+	
 	public CustomWebButton(ImageIcon icon)
 	{
 		super(icon);
+	}
+	
+	public CustomWebButton(String text, ImageIcon icon)
+	{
+		super(text, icon);
 	}
 	
 	public void clearActionListeners()
