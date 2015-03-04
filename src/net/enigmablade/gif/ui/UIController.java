@@ -18,6 +18,8 @@ public interface UIController
 	
 	public void uploadImage(ImageData image);
 	
+	public void removeImage(ImageData image);
+	
 	public void openFileSystem(ImageData image);
 	
 	// Tagging
@@ -28,11 +30,13 @@ public interface UIController
 	
 	// Searching
 	
-	public void setSearchFavorites(String currentQuery, boolean onlyFavs);
+	public void setSearchFavorites(boolean enable);
 	
-	public void addToSearchQuery(String newQuery, boolean onEnd, boolean onlyFavs);
+	public void setSearchUntagged(boolean enable);
 	
-	public void removedFromSearchQuery(String newQuery, boolean onEnd, boolean onlyFavs);
+	public void addToSearchQuery(String newQuery, boolean onEnd);
+	
+	public void removedFromSearchQuery(String newQuery, boolean onEnd);
 	
 	// Library
 	
@@ -58,13 +62,15 @@ public interface UIController
 	
 	public void setCheckNewImages(boolean check);
 	
+	public void setUseNativeFrame(boolean use);
+	
 	public void setLanguage(String language);
 	
 	// Other
 	
 	public void close();
 	
-	public void addFilesFromDrag(List<File> files);
+	public void addFilesFromDrag(List<File> files, boolean copy);
 	
 	public void addUrlFromDrag(URL url);
 	

@@ -20,9 +20,10 @@ public class GifOrganizerMain
 		initLog(console);
 		Log.info("Starting application");
 		
-		initLAF();
+		Config config = SettingsLoader.getConfig("config");
+		initLAF(!config.useNativeFrame());
 		
-		GifOrganizer controller = initController();
+		GifOrganizer controller = new GifOrganizer(config);
 		start(controller, controller.getView());
 		
 		Log.info("Done!");
@@ -42,7 +43,7 @@ public class GifOrganizerMain
 		System.setProperty("org.slf4j.simpleLogger.showThreadName", "false");
 	}
 	
-	private static void initLAF()
+	private static void initLAF(boolean decorateFrame)
 	{
 		Log.info("Initializing look and feel...");
 		
@@ -55,8 +56,11 @@ public class GifOrganizerMain
 			System.exit(0);
 		}
 		
-		WebLookAndFeel.setDecorateFrames(true);
-		WebLookAndFeel.setDecorateDialogs(true);
+		if(decorateFrame)
+		{
+			WebLookAndFeel.setDecorateFrames(true);
+			WebLookAndFeel.setDecorateDialogs(true);
+		}
 		
 		LanguageManager.setSupportedLanguages(LanguageManager.ENGLISH);
 		LanguageManager.initialize();
@@ -64,11 +68,6 @@ public class GifOrganizerMain
 		//LanguageManager.registerLanguageUpdater(new LangWebFrameLU());
 		LanguageManager.registerLanguageUpdater(new WebSearchFieldLU());
 		LanguageManager.addDictionary(ResourceLoader.getResource("languages.xml"));
-	}
-	
-	private static GifOrganizer initController()
-	{
-		return new GifOrganizer();
 	}
 	
 	private static void start(GifOrganizer controller, GifOrganizerUI view)

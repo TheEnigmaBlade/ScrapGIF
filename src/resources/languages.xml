@@ -62,13 +62,16 @@
 				<value lang="en" mnemonic="s">Settings</value>
 			</record>
 			<record key="checknewimages">
-				<value lang="en" mnemonic="n">Check for new images</value>
+				<value lang="en" mnemonic="n">Monitor library folder for new images</value>
 			</record>
-			<record key="imagesize" mnemonic="u">
+			<record key="imagesize" mnemonic="s">
 				<value lang="en">Image size</value>
 			</record>
 			<record key="uploadservice" mnemonic="u">
 				<value lang="en">Upload service</value>
+			</record>
+			<record key="nativeframe" mnemonic="w">
+				<value lang="en">Use system window (requires restart)</value>
 			</record>
 			<record key="language" mnemonic="l">
 				<value lang="en">Language</value>
@@ -81,6 +84,9 @@
 			</record>
 			<record key="about">
 				<value lang="en" mnemonic="a">About...</value>
+			</record>
+			<record key="changelog">
+				<value lang="en" mnemonic="c">Changelog...</value>
 			</record>
 		</Dictionary>
 	</Dictionary>
@@ -100,21 +106,32 @@
 	
 	<!-- Notifications -->
 	<Dictionary prefix="notification">
-		<Dictionary prefix="service">
+		<Dictionary prefix="upload_error">
+			<record key="none">
+				<value lang="en">Image successfully uploaded</value>
+			</record>
 			<record key="no_service">
-				<value lang="en">Upload failed: no supported service is available.</value>
+				<value lang="en">Upload failed: no supported service is available</value>
 			</record>
 			<record key="no_file">
-				<value lang="en">Upload failed: the file wasn't found.</value>
+				<value lang="en">Upload failed: the file wasn't found</value>
 			</record>
 			<record key="connection">
-				<value lang="en">Upload failed: there was a problem with your internets.</value>
+				<value lang="en">Upload failed: there was a problem with your internet</value>
 			</record>
 			<record key="unexpected">
-				<value lang="en">Upload failed: an unexpected error occurred.</value>
+				<value lang="en">Upload failed: an unexpected error occurred</value>
 			</record>
 			<record key="server">
-				<value lang="en">Upload failed: the server returned an error.</value>
+				<value lang="en">Upload failed: the server returned an error</value>
+			</record>
+		</Dictionary>
+		<Dictionary prefix="copy_error">
+			<record key="none">
+				<value lang="en">Image link copied</value>
+			</record>
+			<record key="no_service">
+				<value lang="en">Copy failed: no supported service is available</value>
 			</record>
 		</Dictionary>
 	</Dictionary>

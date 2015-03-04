@@ -8,19 +8,22 @@ import net.enigmablade.jsonic.*;
 public class Library implements Comparable<Library>
 {
 	private int version;
-	private String id, name, path;
+	private String id, name;
+	private Path path;
 	private Map<String, ImageData> images;
 	private Set<String> tags;
 	
 	private boolean loaded;
 	private JsonArray unloadedImages;
 	
+	// Initialization
+	
 	public Library(String name, String path)
 	{
 		this.version = LibraryManager.LATEST_VERSION;
 		this.id = Long.toString(path.hashCode(), 36);
 		this.name = name;
-		this.path = path;
+		this.path = Paths.get(path);
 		this.images = new LinkedHashMap<>();
 		this.tags = new HashSet<>();
 		
@@ -28,7 +31,7 @@ public class Library implements Comparable<Library>
 		unloadedImages = null;
 	}
 	
-	public Library(int version, String id, String name, String path, JsonArray unloadedImages)
+	public Library(int version, String id, String name, Path path, JsonArray unloadedImages)
 	{
 		this.version = version;
 		this.id = id;
@@ -40,6 +43,8 @@ public class Library implements Comparable<Library>
 		loaded = false;
 		this.unloadedImages = unloadedImages;
 	}
+	
+	// Accessors
 	
 	public int getVersion()
 	{
@@ -69,7 +74,7 @@ public class Library implements Comparable<Library>
 		this.name = name;
 	}
 	
-	public String getPath()
+	public Path getPath()
 	{
 		return path;
 	}
@@ -109,6 +114,11 @@ public class Library implements Comparable<Library>
 		images.put(image.getId(), image);
 	}
 	
+	public void removeImage(ImageData image)
+	{
+		images.remove(image.getId());
+	}
+	
 	public boolean hasImage(ImageData image)
 	{
 		return hasImageId(image.getId());
@@ -133,19 +143,12 @@ public class Library implements Comparable<Library>
 	
 	public Path getImagePath(String path)
 	{
-		//return this.path+File.separator+path;
-		return Paths.get(this.path, path);
+		return this.path.resolve(path);
 	}
 	
 	public Path getImagePath(ImageData image)
 	{
-		//return this.path+File.separator+image.getPath();
-		return Paths.get(path, image.getPath());
-	}
-	
-	public Path resolveImagePath(ImageData image)
-	{
-		return Paths.get(path, image.getPath());
+		return getImagePath(image.getPath());
 	}
 	
 	//Overrides

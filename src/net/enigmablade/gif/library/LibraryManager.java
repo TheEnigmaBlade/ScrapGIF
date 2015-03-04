@@ -37,7 +37,7 @@ public class LibraryManager
 		
 		for(String libraryPath : libraryPaths)
 		{
-			Library library = createLibrary(libraryPath);
+			Library library = createLibrary(Paths.get(libraryPath));
 			if(library != null)
 			{
 				Log.info("Loaded library: "+library.getName());
@@ -46,7 +46,7 @@ public class LibraryManager
 		}
 	}
 	
-	private static Library createLibrary(String libraryPath)
+	private static Library createLibrary(Path libraryPath)
 	{
 		File libraryFile = getLibraryConfig(libraryPath);
 		
@@ -61,7 +61,7 @@ public class LibraryManager
 		try
 		{
 			JsonObject libraryObj = JsonParser.parseObject(libraryFile, false);
-			return loadLibrary(libraryObj);
+			return loadLibrary(libraryObj, libraryPath);
 		}
 		catch(IOException e)
 		{
@@ -75,14 +75,14 @@ public class LibraryManager
 		return null;
 	}
 	
-	private static File getLibraryConfig(String libraryPath)
+	private static File getLibraryConfig(Path libraryPath)
 	{
-		Path path = Paths.get(libraryPath, SETTINGS_DIR, SETTINGS_FILE);
+		Path path = libraryPath.resolve(Paths.get(SETTINGS_DIR, SETTINGS_FILE));
 		Log.info("Getting library config file: "+path.toString());
 		return path.toFile();
 	}
 	
-	private static Library loadLibrary(JsonObject libraryObj) throws JsonParseException
+	private static Library loadLibrary(JsonObject libraryObj, Path path) throws JsonParseException
 	{
 		String type = libraryObj.getString("type");
 		if(!"library".equals(type))
@@ -96,7 +96,6 @@ public class LibraryManager
 		{
 			String id = libraryObj.getString("id");
 			String name = libraryObj.getString("name");
-			String path = libraryObj.getString("path");
 			JsonArray images = libraryObj.getArray("images");
 			
 			return new Library(version, id, name, path, images);
@@ -184,7 +183,7 @@ public class LibraryManager
 		if(!library.isLoaded())
 			return Collections.emptyList();
 		
-		File dir = new File(library.getPath());
+		File dir = library.getPath().toFile();
 		File[] files = dir.listFiles(ImageLoader.IMAGE_FILTER);
 		
 		List<File> newFiles = new ArrayList<>();
@@ -208,7 +207,6 @@ public class LibraryManager
 		libraryObj.put("version", LATEST_VERSION);
 		libraryObj.put("id", library.getId());
 		libraryObj.put("name", library.getName());
-		libraryObj.put("path", library.getPath());
 		
 		JsonArray imagesA = new JsonArray();
 		for(ImageData image : library.getImages())
@@ -246,7 +244,7 @@ public class LibraryManager
 		return o;
 	}
 	
-	private static boolean writeLibrary(String libraryPath, JsonObject libraryObj)
+	private static boolean writeLibrary(Path libraryPath, JsonObject libraryObj)
 	{
 		File libraryFile = getLibraryConfig(libraryPath);
 		return IOUtil.writeFile(libraryFile, libraryObj.getJSON());
@@ -279,7 +277,7 @@ public class LibraryManager
 		return true;
 	}
 	
-	public Library importLibrary(String libraryPath)
+	public Library importLibrary(Path libraryPath)
 	{
 		Log.info("Importing library: dir="+libraryPath);
 		
@@ -296,7 +294,7 @@ public class LibraryManager
 	
 	public static boolean isLibrary(String libraryPath)
 	{
-		File libraryFile = getLibraryConfig(libraryPath);
+		File libraryFile = getLibraryConfig(Paths.get(libraryPath));
 		return libraryFile != null && libraryFile.exists();
 	}
 	

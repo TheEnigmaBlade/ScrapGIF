@@ -97,7 +97,10 @@ public abstract class ServiceManager
 	{
 		Service manager = ServiceManager.getService(link.getService(), null, null);
 		if(manager == null)
+		{
+			Log.warn("Failed to create URL because a manager doesn't exist");
 			return null;
+		}
 		return manager.createUrl(link);
 	}
 }

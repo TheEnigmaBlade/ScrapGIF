@@ -70,8 +70,8 @@ public class GifOrganizerUI extends CustomWebFrame
 	
 	private WebMenuItem newLibraryMenuItem, newLibraryFromMenuItem, importLibraryMenuItem, exportLibrariesMenuItem, manageLibrariesMenuItem, exitMenuItem;
 	private WebMenuItem addImageMenuItem, addWebImageMenuItem, addFolderMenuItem;
-	private WebCheckBoxMenuItem showStarredMenuItem, showUntaggedMenuItem, checkNewImagesMenuItem;
-	private WebMenuItem aboutMenuItem, siteMenuItem, webMenuItem, iconsMenuItem;
+	private WebCheckBoxMenuItem showStarredMenuItem, showUntaggedMenuItem, checkNewImagesMenuItem, useNativeFrameMenuItem;
+	private WebMenuItem aboutMenuItem, changelogMenuItem, siteMenuItem, webMenuItem, iconsMenuItem;
 	
 	private List<WebRadioButtonMenuItem> languageMenuItems;
 	
@@ -156,11 +156,13 @@ public class GifOrganizerUI extends CustomWebFrame
 		topBar.add(libraryComboBox, new TableLayoutConstraints(0, 0));
 		
 		librarySearchField = new WebSearchField();
+		librarySearchField.setEnabled(false);
 		topBar.add(librarySearchField, new TableLayoutConstraints(1, 0));
 		librarySearchField.setLanguage("search");
 		
 		librarySearchFavorite = new WebCheckBox("Favorites only");
 		librarySearchFavorite.setMargin(0, 0, 0, 3);
+		librarySearchFavorite.setEnabled(false);
 		topBar.add(librarySearchFavorite, new TableLayoutConstraints(2, 0));
 		librarySearchFavorite.setLanguage("favorites");
 		
@@ -169,7 +171,7 @@ public class GifOrganizerUI extends CustomWebFrame
 		itemPanel = new ItemPanel(controller);
 		
 		itemScrollPane = new WebScrollPane(itemPanel, true, true);
-		itemScrollPane.setVerticalScrollBarPolicy(WebScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		itemScrollPane.setVerticalScrollBarPolicy(WebScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		itemScrollPane.getVerticalScrollBar().setUnitIncrement(20);
 		itemScrollPane.getVerticalScrollBar().setBlockIncrement(100);
 		itemScrollPane.setDrawFocus(false);
@@ -211,6 +213,7 @@ public class GifOrganizerUI extends CustomWebFrame
 	private void initSettings(Config config)
 	{
 		checkNewImagesMenuItem.setSelected(config.isCheckNewImages());
+		useNativeFrameMenuItem.setSelected(config.useNativeFrame());
 	}
 	
 	private void initListeners()
@@ -233,13 +236,14 @@ public class GifOrganizerUI extends CustomWebFrame
 			public void mouseExited(MouseEvent evt)
 			{
 				stopAnimations();
+				hoveredImage = null;
 			}
 		});
 		
 		//Top bar
 		
 		libraryComboBox.addItemListener(evt -> {
-			if(evt.getStateChange() == ItemEvent.SELECTED)
+			if(isSelected(evt))
 			{
 				Library library = (Library)evt.getItem();
 				controller.setLibrary(library);
@@ -261,7 +265,7 @@ public class GifOrganizerUI extends CustomWebFrame
 					String query = d.getText(0, d.getLength());
 					
 					//System.out.println("Offset="+evt.getOffset()+", length="+d.getLength());
-					controller.addToSearchQuery(query, evt.getOffset() == d.getLength()-1, librarySearchFavorite.isSelected());
+					controller.addToSearchQuery(query, evt.getOffset() == d.getLength()-1);
 				}
 				catch(BadLocationException e)
 				{
@@ -282,7 +286,7 @@ public class GifOrganizerUI extends CustomWebFrame
 					String query = d.getText(0, d.getLength());
 					
 					//System.out.println("Offset="+evt.getOffset()+", length="+d.getLength());
-					controller.removedFromSearchQuery(query, evt.getOffset() == d.getLength()-1, librarySearchFavorite.isSelected());
+					controller.removedFromSearchQuery(query, evt.getOffset() == d.getLength()-1);
 				}
 				catch(BadLocationException e)
 				{
@@ -295,7 +299,7 @@ public class GifOrganizerUI extends CustomWebFrame
 			
 		});
 		
-		librarySearchFavorite.addItemListener(evt -> ui_setSearchFavorites(evt.getStateChange() == ItemEvent.SELECTED));
+		librarySearchFavorite.addItemListener(evt -> ui_setSearchFavorites(isSelected(evt)));
 		
 		//Items
 		
@@ -305,11 +309,11 @@ public class GifOrganizerUI extends CustomWebFrame
 			{
 				if(SwingUtils.isLeftMouseButton(evt) || SwingUtils.isRightMouseButton(evt))
 				{
-					ItemImage item = (ItemImage)evt.getSource();
-					if(!item.isMenuOpen())
+					ItemImage image = (ItemImage)evt.getSource();
+					if(!image.isMenuOpen())
 					{
-						item.stopAnimation();
-						item.openMenu();
+						image.stopAnimation();
+						image.openMenu();
 					}
 				}
 			}
@@ -340,7 +344,8 @@ public class GifOrganizerUI extends CustomWebFrame
 				{
 					item.stopAnimation();
 					item.closeMenu();
-					hoveredImage = null;
+					if(item.equals(hoveredImage))
+						hoveredImage = null;
 				}
 			}
 		});
@@ -388,7 +393,7 @@ public class GifOrganizerUI extends CustomWebFrame
 						
 						Log.info("Dropped files");
 						List<File> droppedFiles = (List<File>)transferable.getTransferData(DataFlavor.javaFileListFlavor);
-						controller.addFilesFromDrag(droppedFiles);
+						controller.addFilesFromDrag(droppedFiles, evt.getDropAction() == DnDConstants.ACTION_COPY);
 					}
 					else
 					{
@@ -404,7 +409,7 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		//Static
 		
-		ItemImage.initStaticListeners(this::uploadImage, this::tagImage, this::starImage, this::removeImage, this::openImageFolder);
+		ItemImage.initStaticListeners(this::ui_uploadImage, this::ui_tagImage, this::ui_starImage, this::ui_removeImage, this::ui_openImageFolder);
 	}
 	
 	private void initMenuBar()
@@ -500,7 +505,6 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		showUntaggedMenuItem = new WebCheckBoxMenuItem("Show untagged only");
 		showUntaggedMenuItem.setIcon(GifConstants.noTagIcon);
-		showUntaggedMenuItem.setEnabled(false);
 		viewMenu.add(showUntaggedMenuItem);
 		showUntaggedMenuItem.setLanguage("showuntagged");
 		
@@ -526,6 +530,10 @@ public class GifOrganizerUI extends CustomWebFrame
 		//TODO: fill upload services menu
 		
 		settingsMenu.addSeparator();
+		
+		useNativeFrameMenuItem = new WebCheckBoxMenuItem("Use system window (requires restart)");
+		settingsMenu.add(useNativeFrameMenuItem);
+		useNativeFrameMenuItem.setLanguage("nativeframe");
 		
 		//// Languages
 		WebMenu languageMenu = new WebMenu("Language");
@@ -559,6 +567,12 @@ public class GifOrganizerUI extends CustomWebFrame
 		aboutMenuItem.setEnabled(false);
 		aboutMenu.add(aboutMenuItem);
 		aboutMenuItem.setLanguage("about");
+		
+		changelogMenuItem = new WebMenuItem("Changelog...");
+		changelogMenuItem.setIcon(GifConstants.aboutIcon);
+		changelogMenuItem.setEnabled(false);
+		aboutMenu.add(changelogMenuItem);
+		changelogMenuItem.setLanguage("changelog");
 		
 		aboutMenu.addSeparator();
 		
@@ -599,16 +613,20 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		// View menu
 		
-		showStarredMenuItem.addItemListener(evt -> ui_setSearchFavorites(evt.getStateChange() == ItemEvent.SELECTED));
+		showStarredMenuItem.addItemListener(evt -> ui_setSearchFavorites(isSelected(evt)));
+		
+		showUntaggedMenuItem.addItemListener(evt -> ui_setSearchUntagged(isSelected(evt)));
 		
 		// Settings menu
 		
-		checkNewImagesMenuItem.addItemListener(evt -> controller.setCheckNewImages(evt.getStateChange() == ItemEvent.SELECTED));
+		checkNewImagesMenuItem.addItemListener(evt -> controller.setCheckNewImages(isSelected(evt)));
+		
+		useNativeFrameMenuItem.addItemListener(evt -> controller.setUseNativeFrame(isSelected(evt)));
 		
 		for(WebRadioButtonMenuItem item : languageMenuItems)
 		{
 			item.addItemListener((evt) -> {
-				if(evt.getStateChange() == ItemEvent.SELECTED)
+				if(isSelected(evt))
 					controller.setLanguage(item.getName());
 			});
 		}
@@ -616,6 +634,8 @@ public class GifOrganizerUI extends CustomWebFrame
 		// About menu
 		
 		aboutMenuItem.addActionListener(evt -> ui_about());
+		
+		changelogMenuItem.addActionListener(evt -> ui_changelog());
 		
 		siteMenuItem.addActionListener(evt -> ui_website());
 		
@@ -630,50 +650,39 @@ public class GifOrganizerUI extends CustomWebFrame
 		center();
 	}
 	
-	// UI methods
+	// UI action methods
 	
-	public void uploadImage(ImageData data)
+	private void ui_uploadImage(ImageData data)
 	{
 		Log.info("Upload image triggered for "+data.getId());
 		controller.uploadImage(data);
 	}
 	
-	public void tagImage(ImageData data)
+	private void ui_tagImage(ImageData data)
 	{
 		Log.info("Tag image triggered for "+data.getId());
 		controller.tagImage(data);
 	}
 	
-	public void starImage(ImageData data)
+	private void ui_starImage(ImageData data)
 	{
 		Log.info("Star image triggered for "+data.getId());
 		controller.starImage(data);
 	}
 	
-	private void stopAnimations()
-	{
-		ItemImage.stopAnimations();
-		
-		if(hoveredImage != null)
-		{
-			hoveredImage.closeMenu();
-			hoveredImage = null;
-		}
-	}
-	
-	public void openImageFolder(ImageData data)
+	private void ui_openImageFolder(ImageData data)
 	{
 		Log.info("Open folder triggered for "+data.getId());
 		controller.openFileSystem(data);
 	}
 	
-	public void removeImage(ImageData data)
+	private void ui_removeImage(ImageData data)
 	{
 		Log.info("Remove image triggered for "+data.getId());
-		//TODO
+		controller.removeImage(data);
 	}
 	
-	//// Menu bar
+	//// Menu bar action methods
 	
 	private void ui_newLibrary()
 	{
@@ -757,6 +766,11 @@ public class GifOrganizerUI extends CustomWebFrame
 		//TODO open about dialog
 	}
 	
+	private void ui_changelog()
+	{
+		//TODO
+	}
+	
 	private void ui_website()
 	{
 		IOUtil.openWebsite("http://enigmablade.net/");
@@ -781,11 +795,16 @@ public class GifOrganizerUI extends CustomWebFrame
 			showStarredMenuItem.setSelected(selected);
 			searchFavoritesLock = false;
 			
-			controller.setSearchFavorites(librarySearchField.getText(), selected);
+			controller.setSearchFavorites(selected);
 		}
 	}
 	
-	// Interaction
+	private void ui_setSearchUntagged(boolean selected)
+	{
+		controller.setSearchUntagged(selected);
+	}
+	
+	// Receive from controller
 	
 	public void setLibraries(List<Library> libraries)
 	{
@@ -811,9 +830,13 @@ public class GifOrganizerUI extends CustomWebFrame
 		libraryComboBox.setSelectedItem(library);
 		
 		boolean enable = library != null;
+		// Menu bar
 		addImageMenuItem.setEnabled(enable);
 		addWebImageMenuItem.setEnabled(enable);
 		addFolderMenuItem.setEnabled(enable);
+		// Main content
+		librarySearchField.setEnabled(enable);
+		librarySearchFavorite.setEnabled(enable);
 	}
 	
 	public void setLibraryLoading(boolean loading)
@@ -828,11 +851,12 @@ public class GifOrganizerUI extends CustomWebFrame
 	
 	public void addImage(ImageData data)
 	{
-		final ItemImage image = itemPanel.addImage(data);
+		/*final ItemImage image = */itemPanel.addImage(data);
 		updateNumImages();
 		
 		SwingUtilities.invokeLater(() -> {
-			updateImageVisibility(image, false);
+			updateVisibleImages();
+			//updateImageVisibility(image, false);
 			
 			itemPanel.revalidate();
 			itemPanel.repaint();
@@ -870,21 +894,18 @@ public class GifOrganizerUI extends CustomWebFrame
 		addAllImages(datas);
 	}
 	
-	/*public void removeImage(ImageData data)
+	public void removeImage(ImageData data)
 	{
 		itemPanel.removeImage(data.getId());
 		updateNumImages();
 		
 		SwingUtilities.invokeLater(() -> {
 			updateVisibleImages();
-			enableImagesScrollListener(true);
 			
-			//itemPanel.doLayout();
 			itemPanel.revalidate();
-			//itemScrollPane.revalidate();
-			//itemScrollPane.repaint();
+			itemPanel.repaint();
 		});
-	}*/
+	}
 	
 	public void updatedThumbnail(ImageData data)
 	{
@@ -911,8 +932,9 @@ public class GifOrganizerUI extends CustomWebFrame
 	
 	public void refreshImageMenu()
 	{
-		hoveredImage.closeMenu();
-		hoveredImage.openMenu();
+		//hoveredImage.closeMenu();
+		if(hoveredImage != null && hoveredImage.isMenuOpen())
+			hoveredImage.openMenu();
 	}
 	
 	public void resetSearch()
@@ -968,14 +990,26 @@ public class GifOrganizerUI extends CustomWebFrame
 	
 	// Notifications
 	
-	public void notifyUpload(ServiceError error, boolean playSound)
+	public void notifyUpload(ServiceError error, boolean playSound, Callback clickCallback)
 	{
 		WebNotificationPopup notice = new WebNotificationPopup();
+		notice.setContent(getUploadErrorMessage(error));
 		if(error == ServiceError.NONE)
 		{
 			notice.setDisplayTime(5000);
 			notice.setIcon(NotificationIcon.information);
-			notice.setContent("Image successfully uploaded");
+			notice.addNotificationListener(new NotificationListener() {
+				@Override
+				public void optionSelected(NotificationOption option) {}
+				@Override
+				public void closed() {}
+				@Override
+				public void accepted()
+				{
+					if(clickCallback != null)
+						clickCallback.call();
+				}
+			});
 			
 			if(playSound)
 				playSoundEffect(GifConstants.uploadSuccessSound);
@@ -984,17 +1018,47 @@ public class GifOrganizerUI extends CustomWebFrame
 		{
 			notice.setDisplayTime(8000);
 			notice.setIcon(NotificationIcon.error);
-			notice.setContent(getServiceErrorMessage(error));
+			
+			//if(playSound)
+			//	playSoundEffect(GifConstants.uploadErrorSound);
 		}
+		
 		NotificationManager.showNotification(this, notice);
 	}
 	
-	public void notifyLinkCopy()
+	public void notifyLinkCopy(ServiceError error, boolean playSound, Callback clickCallback)
 	{
 		WebNotificationPopup notice = new WebNotificationPopup();
-		notice.setDisplayTime(5000);
-		notice.setIcon(NotificationIcon.information);
-		notice.setContent("Image link copied");
+		notice.setContent(getCopyErrorMessage(error));
+		if(error == ServiceError.NONE)
+		{
+			notice.setDisplayTime(5000);
+			notice.setIcon(NotificationIcon.information);
+			notice.addNotificationListener(new NotificationListener() {
+				@Override
+				public void optionSelected(NotificationOption option) {}
+				@Override
+				public void closed() {}
+				@Override
+				public void accepted()
+				{
+					if(clickCallback != null)
+						clickCallback.call();
+				}
+			});
+			
+			//if(playSound)
+			//	playSoundEffect(GifConstants.uploadSound);
+		}
+		else
+		{
+			notice.setDisplayTime(8000);
+			notice.setIcon(NotificationIcon.error);
+			notice.setContent(getCopyErrorMessage(error));
+			
+			//if(playSound)
+			//	playSoundEffect(GifConstants.uploadErrorSound);
+		}
 		NotificationManager.showNotification(this, notice);
 	}
 	
@@ -1044,6 +1108,17 @@ public class GifOrganizerUI extends CustomWebFrame
 	}
 	
 	// Internal updates
+	
+	private void stopAnimations()
+	{
+		ItemImage.stopAnimations();
+		
+		if(hoveredImage != null)
+		{
+			hoveredImage.closeMenu();
+			hoveredImage = null;
+		}
+	}
 	
 	private void updateNumImages()
 	{
@@ -1096,8 +1171,17 @@ public class GifOrganizerUI extends CustomWebFrame
 	public boolean getNewImagesConfirmation(int numImages)
 	{
 		return WebOptionPane.showConfirmDialog(this,
-				numImages+" new "+(numImages == 1 ? "image" : "images")+" were found in the library folder.\nDo you want to add them now?",
+				numImages+" new "+(numImages == 1 ? "image was" : "images were")+" found in the library folder.\n"
+						+ "Do you want to add "+(numImages == 1 ? "it" : "them")+" now?",
 				"New images found",
+				WebOptionPane.YES_NO_OPTION, WebOptionPane.QUESTION_MESSAGE) == WebOptionPane.YES_OPTION;
+	}
+	
+	public boolean getRemoveImageConfirmation()
+	{
+		return WebOptionPane.showConfirmDialog(this,
+				"Are you sure you want to remove this image?",
+				"Remove image?",
 				WebOptionPane.YES_NO_OPTION, WebOptionPane.QUESTION_MESSAGE) == WebOptionPane.YES_OPTION;
 	}
 	
@@ -1163,9 +1247,14 @@ public class GifOrganizerUI extends CustomWebFrame
 		imageScrollListenerEnabled = enable;
 	}
 	
-	private String getServiceErrorMessage(ServiceError error)
+	private String getCopyErrorMessage(ServiceError error)
 	{
-		return LanguageManager.get("giforg.notification.service."+error.name().toLowerCase());
+		return LanguageManager.get("giforg.notification.copy_error."+error.name().toLowerCase());
+	}
+	
+	private String getUploadErrorMessage(ServiceError error)
+	{
+		return LanguageManager.get("giforg.notification.upload_error."+error.name().toLowerCase());
 	}
 	
 	private void playSoundEffect(String name)
@@ -1180,6 +1269,13 @@ public class GifOrganizerUI extends CustomWebFrame
 		{
 			Log.error("Failed to play sound effect: "+name, e);
 		}
+	}
+	
+	//// Static utilities
+	
+	private static boolean isSelected(ItemEvent evt)
+	{
+		return evt.getStateChange() == ItemEvent.SELECTED;
 	}
 	
 	// Settings

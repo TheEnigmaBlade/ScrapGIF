@@ -1,5 +1,6 @@
 package net.enigmablade.gif;
 
+import java.nio.file.*;
 import java.util.*;
 import java.util.stream.*;
 import com.alee.log.*;
@@ -15,12 +16,12 @@ public class Config extends Properties
 	}
 	
 	@Override
-	public Object setProperty(String key, String value)
+	public synchronized Object setProperty(String key, String value)
 	{
 		return setProperty(key, value, true);
 	}
 	
-	public Object setProperty(String key, String value, boolean save)
+	public synchronized Object setProperty(String key, String value, boolean save)
 	{
 		Log.debug("setProperty: key="+key+", val="+value);
 		Object o = super.setProperty(key, value);
@@ -29,7 +30,7 @@ public class Config extends Properties
 		return o;
 	}
 	
-	public int getIntProperty(String key, int defaultValue)
+	public synchronized int getIntProperty(String key, int defaultValue)
 	{
 		try
 		{
@@ -45,7 +46,7 @@ public class Config extends Properties
 		}
 	}
 	
-	public boolean getBooleanProperty(String key, boolean defaultValue)
+	public synchronized boolean getBooleanProperty(String key, boolean defaultValue)
 	{
 		String value = getProperty(key);
 		if("true".equalsIgnoreCase(value))
@@ -59,106 +60,116 @@ public class Config extends Properties
 	
 	//// UI
 	
-	public boolean isWindowSizeSet()
+	public synchronized boolean useNativeFrame()
+	{
+		return getBooleanProperty("use_native_frame", false);
+	}
+	
+	public synchronized void setUseNativeFrame(boolean use)
+	{
+		setProperty("use_native_frame", String.valueOf(use));
+	}
+	
+	public synchronized boolean isWindowSizeSet()
 	{
 		return containsKey("window_width") && containsKey("window_height");
 	}
 	
-	public int getWindowWidth()
+	public synchronized int getWindowWidth()
 	{
 		return getIntProperty("window_width", -1);
 	}
 	
-	public int getWindowHeight()
+	public synchronized int getWindowHeight()
 	{
 		return getIntProperty("window_height", -1);
 	}
 	
-	public void setWindowSize(int width, int height)
+	public synchronized void setWindowSize(int width, int height)
 	{
 		setProperty("window_width", String.valueOf(width), false);
 		setProperty("window_height", String.valueOf(height), true);
 	}
 	
-	public ItemSize getImageSize()
+	public synchronized ItemSize getImageSize()
 	{
 		//TODO
 		return ItemSize.NORMAL;
 	}
 	
-	public void setImageSize(ItemSize size)
+	public synchronized void setImageSize(ItemSize size)
 	{
 		//TODO
 	}
 	
-	/*public boolean isShowStarredOnly()
+	/*public synchronized boolean isShowStarredOnly()
 	{
 		return getBooleanProperty("show_starred_only", false);
 	}
 	
-	public void setShowStarredOnly(boolean showStarred)
+	public synchronized void setShowStarredOnly(boolean showStarred)
 	{
 		setProperty("show_starred_only", String.valueOf(showStarred));
 	}
 	
-	public boolean isShowUntaggedOnly()
+	public synchronized boolean isShowUntaggedOnly()
 	{
 		return getBooleanProperty("show_untagged_only", false);
 	}
 	
-	public void setShowUntaggedOnly(boolean showUntagged)
+	public synchronized void setShowUntaggedOnly(boolean showUntagged)
 	{
 		setProperty("show_untagged_only", String.valueOf(showUntagged));
 	}*/
 	
 	//// Data
 	
-	public Set<String> getLibraries()
+	public synchronized Set<String> getLibraries()
 	{
 		return new HashSet<>(Arrays.asList(getProperty("libraries", "").split(";")));
 	}
 	
-	public void setLibraries(Set<String> libraries)
+	public synchronized void setLibraries(Set<Path> libraries)
 	{
-		setProperty("libraries", libraries.stream().collect(Collectors.joining(";")));
+		setProperty("libraries", libraries.stream().map(Path::toString).collect(Collectors.joining(";")));
 	}
 	
-	public String getRecentTags()
+	public synchronized String getRecentTags()
 	{
 		return getProperty("recent_tags");
 	}
 	
-	public void setRecentTags(String tags)
+	public synchronized void setRecentTags(String tags)
 	{
 		setProperty("recent_tags", tags);
 	}
 	
-	public List<String> getPreferredServices()
+	public synchronized List<String> getPreferredServices()
 	{
 		return Arrays.asList(getProperty("pref_service", "").split(";"));
 	}
 	
-	public void setPreferredServices(Set<String> services)
+	public synchronized void setPreferredServices(Set<String> services)
 	{
 		setProperty("pref_service", services.stream().collect(Collectors.joining(";")));
 	}
 	
-	public boolean isCheckNewImages()
+	public synchronized boolean isCheckNewImages()
 	{
 		return getBooleanProperty("check_new_images", true);
 	}
 	
-	public void setCheckNewImages(boolean check)
+	public synchronized void setCheckNewImages(boolean check)
 	{
 		setProperty("check_new_images", String.valueOf(check));
 	}
 	
-	public boolean isSoundEffectsEnabled()
+	public synchronized boolean isSoundEffectsEnabled()
 	{
 		return getBooleanProperty("sound_effects", true);
 	}
 	
-	public void setSoundEffectsEnabled(boolean enabled)
+	public synchronized void setSoundEffectsEnabled(boolean enabled)
 	{
 		setProperty("sound_effects", String.valueOf(enabled));
 	}

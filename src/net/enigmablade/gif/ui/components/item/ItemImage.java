@@ -220,7 +220,6 @@ public class ItemImage extends CustomWebOverlay
 		menuRemove.setDrawFocus(false);
 		menuRemove.setRolloverShine(true);
 		menuRemove.setDrawSides(false, false, false, false);
-		menuRemove.setEnabled(false);
 		
 		menuFolder = new CustomWebButton("Show file", GifConstants.folderClosedIcon);
 		menuFolder.setRolloverIcon(GifConstants.folderOpenIcon);
@@ -347,18 +346,24 @@ public class ItemImage extends CustomWebOverlay
 		menuStar.setIcon(starred ? GifConstants.starEnabledIcon : GifConstants.starDisabledIcon);
 		menuStar.setRolloverIcon(starred ? GifConstants.starDisabledIcon : GifConstants.starEnabledIcon);
 		
-		menuUpload.addActionListener(evt -> uploadAction.accept(data));
-		menuTags.addActionListener(evt -> tagAction.accept(data));
-		menuStar.addActionListener(evt -> starAction.accept(data));
-		menuRemove.addActionListener(evt -> removeAction.accept(data));
-		menuFolder.addActionListener(evt -> folderAction.accept(data));
-		
-		stopAnimations();
-		stopLoading(true);
-		
-		menuOpen = true;
-		addOverlay(menuOverlay);
-		menuOverlay.setVisible(true);
+		// This stuff is only done once!
+		if(!menuOpen)
+		{
+			// Set listeners
+			menuUpload.addActionListener(evt -> uploadAction.accept(data));
+			menuTags.addActionListener(evt -> tagAction.accept(data));
+			menuStar.addActionListener(evt -> starAction.accept(data));
+			menuRemove.addActionListener(evt -> removeAction.accept(data));
+			menuFolder.addActionListener(evt -> folderAction.accept(data));
+			
+			// Reset states
+			stopAnimations();
+			stopLoading(true);
+			
+			menuOpen = true;
+			addOverlay(menuOverlay);
+			menuOverlay.setVisible(true);
+		}
 	}
 	
 	public void closeMenu()

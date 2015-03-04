@@ -5,6 +5,7 @@ import java.util.regex.*;
 import java.util.stream.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.library.*;
+import net.enigmablade.gif.search.filters.*;
 
 public class SearchManager
 {
@@ -15,11 +16,15 @@ public class SearchManager
 	private String query;
 	private Set<String> queryParts;
 	
+	// Initialization
+	
 	public SearchManager()
 	{
 		states = new LinkedList<>();
 		query = "";
 		queryParts = new HashSet<>();
+		
+		filters = new HashSet<>();
 	}
 	
 	public void buildSearchFromLibrary(Library library)
@@ -32,7 +37,9 @@ public class SearchManager
 		states.push(initialState);
 	}
 	
-	public List<ImageData> addToQuery(String newQuery, boolean addedToEnd, boolean onlyFavs)
+	// String search
+	
+	public List<ImageData> addToQuery(String newQuery, boolean addedToEnd)
 	{
 		Objects.requireNonNull(newQuery, "You need to have a query");
 		//if(newQuery.length() == 0 || newQuery.length() <= query.length())
@@ -52,7 +59,7 @@ public class SearchManager
 		}
 		
 		List<SearchItem> newState = initialState;
-		for(int n = 0; n < diff.length() || (n == 0 && onlyFavs); n++)
+		for(int n = 0; n < diff.length() || (n == 0 && hasFilters()); n++)
 		{
 			if(diff.length() > 0)
 			{
@@ -68,7 +75,7 @@ public class SearchManager
 			newState = new LinkedList<>();
 			items: for(SearchItem item : currentState)
 			{
-				if(onlyFavs && !item.getData().isStarred())
+				if(!testFilters(item))
 					continue items;
 				
 				for(String queryPart : queryParts)
@@ -85,7 +92,7 @@ public class SearchManager
 		return getImageData(newState);
 	}
 	
-	public List<ImageData> removeFromQuery(String newQuery, boolean removedFromEnd, boolean onlyFavs)
+	public List<ImageData> removeFromQuery(String newQuery, boolean removedFromEnd)
 	{
 		Objects.requireNonNull(query, "You need to have a query");
 		//if(newQuery.length() == 0 || newQuery.length() >= query.length())
@@ -112,8 +119,10 @@ public class SearchManager
 			return getImageData(newState);
 		}
 		
-		return addToQuery(newQuery, false, onlyFavs);
+		return addToQuery(newQuery, false);
 	}
+	
+	//// Helpers
 	
 	private static Set<String> splitString(String str)
 	{
@@ -125,5 +134,45 @@ public class SearchManager
 		if(items == null)
 			return new LinkedList<>();
 		return items.stream().map((searchItem) -> searchItem.getData()).collect(Collectors.toList());
+	}
+	
+	// Filters
+	
+	private Set<SearchFilter> filters;
+	
+	public static final SearchFilter FAVORITE_FILTER = new FavoriteFilter();
+	public static final SearchFilter UNTAGGED_FILTER = new UntaggedFilter();
+	
+	public List<ImageData> addFilter(SearchFilter filter)
+	{
+		if(filters.add(filter))
+			return filtersChanged();
+		return getImageData(states.getLast());
+	}
+	
+	public List<ImageData> removeFilter(SearchFilter filter)
+	{
+		if(filters.remove(filter))
+			return filtersChanged();
+		return getImageData(states.getLast());
+	}
+	
+	private List<ImageData> filtersChanged()
+	{
+		return removeFromQuery(query, false);
+	}
+	
+	private boolean hasFilters()
+	{
+		return !filters.isEmpty();
+	}
+	
+	private boolean testFilters(SearchItem i)
+	{
+		ImageData d = i.getData();
+		for(SearchFilter f : filters)
+			if(!f.test(d))
+				return false;
+		return true;
 	}
 }
