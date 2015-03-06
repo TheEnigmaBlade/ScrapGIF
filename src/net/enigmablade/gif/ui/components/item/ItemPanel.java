@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.stream.*;
+import com.alee.log.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.ui.*;
 import net.enigmablade.gif.ui.components.web.*;
@@ -270,6 +271,7 @@ public class ItemPanel extends CustomWebPanel
 		
 		if(this.itemSize != itemSize)
 		{
+			Log.debug("Updating items' size");
 			this.itemSize = itemSize;
 			for(ItemImage img : itemsById.values())
 				img.setSize(itemSize);

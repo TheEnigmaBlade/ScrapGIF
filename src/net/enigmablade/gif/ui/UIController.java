@@ -5,6 +5,7 @@ import java.net.*;
 import java.util.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.library.*;
+import net.enigmablade.gif.ui.components.item.*;
 
 public interface UIController
 {
@@ -59,6 +60,8 @@ public interface UIController
 	public void addImageFolder();
 	
 	// Settings
+	
+	public void setImageSize(ItemSize size);
 	
 	public void setCheckNewImages(boolean check);
 	

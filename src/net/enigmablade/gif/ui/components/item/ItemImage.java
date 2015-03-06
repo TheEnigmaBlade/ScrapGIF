@@ -17,7 +17,6 @@ import com.alee.log.*;
 import com.alee.managers.language.data.*;
 import com.alee.managers.popup.*;
 import com.alee.managers.tooltip.*;
-import net.enigmablade.gif.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.ui.*;
 import net.enigmablade.gif.ui.components.web.*;
@@ -67,11 +66,11 @@ public class ItemImage extends CustomWebOverlay
 		setSize(size);
 		resetSizeSet();
 		
-		initComponents(size);
+		initComponents();
 		initListeners();
 	}
 	
-	private void initComponents(ItemSize size)
+	private void initComponents()
 	{
 		imagePanel = new WebPanel() {
 			@Override
@@ -80,19 +79,19 @@ public class ItemImage extends CustomWebOverlay
 				Graphics2D g2 = (Graphics2D)g;
 				
 				// Fill background
-				g2.setColor(GifConstants.IMAGE_BACKGROUND);
+				g2.setColor(UIConstants.IMAGE_BACKGROUND);
 				g2.fillRect(0, 0, getWidth(), getHeight());
 				
 				// Get image positioning information (adjust if image width is below the min width)
 				int imageX = 0, imageW = getWidth();
 				if(data != null)
 				{
-					imageW = data.getWidth(size.getSize());
+					imageW = data.getWidth(getHeight());
 					imageX = (getWidth() - imageW)/2;
 				}
 				
 				// Draw a frame from an available animation OR the thumbnail
-				g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, GifConstants.PREVIEW_INTERPOLATION);
+				g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, UIConstants.PREVIEW_INTERPOLATION);
 				
 				if(animator != null && frames != null && frames[animator.getFrame()] != null)	// frames shouldn't be null when animator is non-null, but sometimes it was...
 					// Animation
@@ -106,7 +105,6 @@ public class ItemImage extends CustomWebOverlay
 		
 		loadOverlay = new WebProgressOverlay();
 		loadOverlay.setConsumeEvents(false);
-		loadOverlay.setProgressWidth(size.getLoadSize());
 		loadOverlay.setProgressColor(imagePanel.getBackground());
 		loadOverlay.setSpeed(2);
 	}
@@ -149,7 +147,7 @@ public class ItemImage extends CustomWebOverlay
 		menuOverlay.setVisible(false);
 		menuOverlay.setLayout(new TableLayout(
 				new double[]{1, TableLayoutConstants.FILL, TableLayoutConstants.FILL, TableLayoutConstants.FILL, TableLayoutConstants.FILL, 1},
-				new double[]{TableLayoutConstants.FILL, GifConstants.IMAGE_BUTTON_HEIGHT, 2},
+				new double[]{TableLayoutConstants.FILL, UIConstants.IMAGE_BUTTON_HEIGHT, 2},
 				1, 0));
 		
 		// Info panel
@@ -186,19 +184,19 @@ public class ItemImage extends CustomWebOverlay
 		infoPanel.add(tagsLabel);
 		
 		// Buttons
-		menuUpload = new CustomWebButton(GifConstants.exportIcon);
+		menuUpload = new CustomWebButton(UIConstants.exportIcon);
 		menuUpload.setDrawShade(false);
 		menuUpload.setDrawFocus(false);
 		menuUpload.setRolloverShine(true);
 		menuOverlay.add(menuUpload, new TableLayoutConstraints(1, 1));
-		menuTags = new CustomWebButton(GifConstants.tagIcon);
-		menuTags.setRolloverIcon(GifConstants.tagFillIcon);
+		menuTags = new CustomWebButton(UIConstants.tagIcon);
+		menuTags.setRolloverIcon(UIConstants.tagFillIcon);
 		menuTags.setDrawShade(false);
 		menuTags.setDrawFocus(false);
 		menuTags.setRolloverShine(true);
 		menuOverlay.add(menuTags, new TableLayoutConstraints(2, 1));
-		menuStar = new CustomWebButton(GifConstants.starEnabledIcon);
-		menuStar.setRolloverIcon(GifConstants.starDisabledIcon);
+		menuStar = new CustomWebButton(UIConstants.starEnabledIcon);
+		menuStar.setRolloverIcon(UIConstants.starDisabledIcon);
 		menuStar.setDrawShade(false);
 		menuStar.setDrawFocus(false);
 		menuStar.setRolloverShine(true);
@@ -214,15 +212,15 @@ public class ItemImage extends CustomWebOverlay
 		menuOverlay.add(menuMore, new TableLayoutConstraints(4, 1));
 		
 		// More buttons
-		menuRemove = new CustomWebButton("Remove image", GifConstants.removeIcon);
+		menuRemove = new CustomWebButton("Remove image", UIConstants.removeIcon);
 		menuRemove.setHorizontalAlignment(SwingUtilities.LEFT);
 		menuRemove.setDrawShade(false);
 		menuRemove.setDrawFocus(false);
 		menuRemove.setRolloverShine(true);
 		menuRemove.setDrawSides(false, false, false, false);
 		
-		menuFolder = new CustomWebButton("Show file", GifConstants.folderClosedIcon);
-		menuFolder.setRolloverIcon(GifConstants.folderOpenIcon);
+		menuFolder = new CustomWebButton("Show file", UIConstants.folderClosedIcon);
+		menuFolder.setRolloverIcon(UIConstants.folderOpenIcon);
 		menuFolder.setHorizontalAlignment(SwingUtilities.LEFT);
 		menuFolder.setDrawShade(false);
 		menuFolder.setDrawFocus(false);
@@ -343,8 +341,8 @@ public class ItemImage extends CustomWebOverlay
 		
 		// Setup buttons
 		boolean starred = data.isStarred();
-		menuStar.setIcon(starred ? GifConstants.starEnabledIcon : GifConstants.starDisabledIcon);
-		menuStar.setRolloverIcon(starred ? GifConstants.starDisabledIcon : GifConstants.starEnabledIcon);
+		menuStar.setIcon(starred ? UIConstants.starEnabledIcon : UIConstants.starDisabledIcon);
+		menuStar.setRolloverIcon(starred ? UIConstants.starDisabledIcon : UIConstants.starEnabledIcon);
 		
 		// This stuff is only done once!
 		if(!menuOpen)
@@ -398,10 +396,10 @@ public class ItemImage extends CustomWebOverlay
 	
 	public void setSize(ItemSize size)
 	{
-		if(!isSizeSet)
+		//if(!isSizeSet)
 		{
 			if(data != null)
-				setPreferredSize(Math.min(Math.max(data.getWidth(size.getSize()), GifConstants.MIN_IMAGE_WIDTH), GifConstants.MAX_IMAGE_WIDTH), size.getSize());
+				setPreferredSize(Math.min(Math.max(data.getWidth(size.getSize()), UIConstants.MIN_IMAGE_WIDTH), UIConstants.MAX_IMAGE_WIDTH), size.getSize());
 			if(loadOverlay != null)
 				loadOverlay.setProgressWidth(size.getLoadSize());
 			isSizeSet = true;

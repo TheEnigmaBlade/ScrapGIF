@@ -93,13 +93,20 @@ public class Config extends Properties
 	
 	public synchronized ItemSize getImageSize()
 	{
-		//TODO
-		return ItemSize.NORMAL;
+		try
+		{
+			return ItemSize.valueOf(getProperty("image_size", "normal").toUpperCase());
+		}
+		catch(IllegalArgumentException e)
+		{
+			Log.error("Item size value doesn't exist", e);
+			return ItemSize.NORMAL;
+		}
 	}
 	
 	public synchronized void setImageSize(ItemSize size)
 	{
-		//TODO
+		setProperty("image_size", size.name().toLowerCase());
 	}
 	
 	/*public synchronized boolean isShowStarredOnly()

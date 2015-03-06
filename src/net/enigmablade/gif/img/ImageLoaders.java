@@ -10,6 +10,7 @@ import com.alee.utils.*;
 import com.mortennobel.imagescaling.*;
 import net.enigmablade.gif.*;
 import net.enigmablade.gif.library.*;
+import net.enigmablade.gif.ui.*;
 import net.enigmablade.gif.util.*;
 
 public class ImageLoaders
@@ -97,7 +98,7 @@ public class ImageLoaders
 			return null;
 		}
 		
-		BufferedImage thumbnail = scale(staticFrame.getImage(), GifConstants.THUMBNAIL_SIZE_NORMAL);
+		BufferedImage thumbnail = scale(staticFrame.getImage(), UIConstants.THUMBNAIL_SIZE_NORMAL);
 		saveThumbnail(thumbnail, thumbFile);
 		return thumbnail;
 	}

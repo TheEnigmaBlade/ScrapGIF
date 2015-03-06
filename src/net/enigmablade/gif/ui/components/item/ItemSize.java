@@ -1,12 +1,12 @@
 package net.enigmablade.gif.ui.components.item;
 
-import net.enigmablade.gif.*;
+import net.enigmablade.gif.ui.*;
 
 public enum ItemSize
 {
-	SMALL(GifConstants.THUMBNAIL_SIZE_SMALL, GifConstants.THUMBNAIL_LOAD_SMALL),
-	NORMAL(GifConstants.THUMBNAIL_SIZE_NORMAL, GifConstants.THUMBNAIL_LOAD_NORMAL),
-	LARGE(GifConstants.THUMBNAIL_SIZE_LARGE, GifConstants.THUMBNAIL_LOAD_LARGE);
+	SMALL(UIConstants.THUMBNAIL_SIZE_SMALL, UIConstants.THUMBNAIL_LOAD_SMALL),
+	NORMAL(UIConstants.THUMBNAIL_SIZE_NORMAL, UIConstants.THUMBNAIL_LOAD_NORMAL),
+	LARGE(UIConstants.THUMBNAIL_SIZE_LARGE, UIConstants.THUMBNAIL_LOAD_LARGE);
 	
 	/* --- */
 	

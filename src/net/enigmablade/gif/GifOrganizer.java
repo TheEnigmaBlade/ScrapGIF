@@ -23,6 +23,7 @@ import net.enigmablade.gif.search.*;
 import net.enigmablade.gif.search.filters.*;
 import net.enigmablade.gif.services.*;
 import net.enigmablade.gif.ui.*;
+import net.enigmablade.gif.ui.components.item.*;
 import net.enigmablade.gif.util.*;
 
 public class GifOrganizer implements UIController, FileSystemAccessor
@@ -281,10 +282,12 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 	{
 		if(view.getRemoveImageConfirmation())
 		{
+			// Remove from library and view
 			currentLibrary.removeImage(image);
 			view.removeImage(image);
 			saveLibrary();
 			
+			// Delete file
 			Path path = currentLibrary.getImagePath(image);
 			FileUtils util = FileUtils.getInstance();
 			try
@@ -503,6 +506,15 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 	}
 	
 	//// Settings
+	
+	@Override
+	public void setImageSize(ItemSize size)
+	{
+		Log.info("Setting image size to "+size);
+		
+		config.setImageSize(size);
+		view.setImageSize(size);
+	}
 	
 	@Override
 	public void setCheckNewImages(boolean check)

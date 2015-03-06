@@ -1,18 +1,19 @@
-package net.enigmablade.gif;
+package net.enigmablade.gif.ui;
 
 import java.awt.*;
 import javax.swing.*;
+import net.enigmablade.gif.*;
 
-public class GifConstants
+public class UIConstants
 {
 	// Sizes
-	public static final int THUMBNAIL_SIZE_SMALL	= 150,
-							THUMBNAIL_SIZE_NORMAL	= 200,
-							THUMBNAIL_SIZE_LARGE	= 250;
+	public static final int THUMBNAIL_SIZE_SMALL	= 100,
+							THUMBNAIL_SIZE_NORMAL	= 150,
+							THUMBNAIL_SIZE_LARGE	= 200;
 	
 	public static final int THUMBNAIL_LOAD_SMALL	= 15,
-							THUMBNAIL_LOAD_NORMAL	= 25,
-							THUMBNAIL_LOAD_LARGE	= 35;
+							THUMBNAIL_LOAD_NORMAL	= 20,
+							THUMBNAIL_LOAD_LARGE	= 25;
 	
 	public static final int MIN_IMAGE_WIDTH = 150,
 							MAX_IMAGE_WIDTH = MIN_IMAGE_WIDTH*3;

@@ -3,7 +3,9 @@
 ## Additions
 
 - Images can be removed from a library
+- Images in view can be resized (option in view menu)
 - Clicking on the upload/copy notifications visits the URL
+- Search clear button on right of component
 - Search components are disabled when no library exists
 - Support for system drag modifier keys (ex. In Windows, hold ctrl to copy rather than move)
 - Option to monitor library folders for new images (enabled by default)

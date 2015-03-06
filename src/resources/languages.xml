@@ -55,6 +55,18 @@
 			<record key="showuntagged" mnemonic="u">
 				<value lang="en">Show untagged only</value>
 			</record>
+			
+			<Dictionary prefix="imagesize">
+				<record key="small" mnemonic="s">
+					<value lang="en">Small</value>
+				</record>
+				<record key="normal" mnemonic="n">
+					<value lang="en">Normal</value>
+				</record>
+				<record key="large" mnemonic="l">
+					<value lang="en">Large</value>
+				</record>
+			</Dictionary>
 		</Dictionary>
 		<!-- Settings menu -->
 		<Dictionary prefix="settings">

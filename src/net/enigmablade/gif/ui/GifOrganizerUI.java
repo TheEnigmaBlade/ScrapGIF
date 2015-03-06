@@ -71,6 +71,7 @@ public class GifOrganizerUI extends CustomWebFrame
 	private WebMenuItem newLibraryMenuItem, newLibraryFromMenuItem, importLibraryMenuItem, exportLibrariesMenuItem, manageLibrariesMenuItem, exitMenuItem;
 	private WebMenuItem addImageMenuItem, addWebImageMenuItem, addFolderMenuItem;
 	private WebCheckBoxMenuItem showStarredMenuItem, showUntaggedMenuItem, checkNewImagesMenuItem, useNativeFrameMenuItem;
+	private WebRadioButtonMenuItem smallSizeMenuItem, normalSizeMenuItem, largeSizeMenuItem;
 	private WebMenuItem aboutMenuItem, changelogMenuItem, siteMenuItem, webMenuItem, iconsMenuItem;
 	
 	private List<WebRadioButtonMenuItem> languageMenuItems;
@@ -147,7 +148,7 @@ public class GifOrganizerUI extends CustomWebFrame
 		topBar.setLayout(new TableLayout(
 				new double[]{150, TableLayoutConstants.FILL, TableLayoutConstants.PREFERRED},
 				new double[]{TableLayoutConstants.FILL},
-				2, 0));
+				0, 0));
 		contentPane.add(topBar, BorderLayout.NORTH);
 		LMU.registerContainer(topBar, "giforg.toolbar");
 		
@@ -156,11 +157,12 @@ public class GifOrganizerUI extends CustomWebFrame
 		topBar.add(libraryComboBox, new TableLayoutConstraints(0, 0));
 		
 		librarySearchField = new WebSearchField();
+		librarySearchField.setDrawShade(false);
 		librarySearchField.setEnabled(false);
 		topBar.add(librarySearchField, new TableLayoutConstraints(1, 0));
 		librarySearchField.setLanguage("search");
 		
-		librarySearchFavorite = new WebCheckBox("Favorites only");
+		librarySearchFavorite = new WebCheckBox("Starred only");
 		librarySearchFavorite.setMargin(0, 0, 0, 3);
 		librarySearchFavorite.setEnabled(false);
 		topBar.add(librarySearchFavorite, new TableLayoutConstraints(2, 0));
@@ -214,6 +216,16 @@ public class GifOrganizerUI extends CustomWebFrame
 	{
 		checkNewImagesMenuItem.setSelected(config.isCheckNewImages());
 		useNativeFrameMenuItem.setSelected(config.useNativeFrame());
+		
+		switch(config.getImageSize())
+		{
+			case SMALL: smallSizeMenuItem.setSelected(true);
+				break;
+			case NORMAL: normalSizeMenuItem.setSelected(true);
+				break;
+			case LARGE: largeSizeMenuItem.setSelected(true);
+				break;
+		}
 	}
 	
 	private void initListeners()
@@ -326,7 +338,7 @@ public class GifOrganizerUI extends CustomWebFrame
 				{
 					stopAnimations();
 					
-					ResponsivenessUtil.delayAction(GifConstants.ANIMATION_DELAY, () -> {
+					ResponsivenessUtil.delayAction(UIConstants.ANIMATION_DELAY, () -> {
 						if(item.getMousePosition() != null)
 						{
 							controller.animateImage(item.getData());
@@ -428,36 +440,36 @@ public class GifOrganizerUI extends CustomWebFrame
 		LMU.registerContainer(libraryMenu, "library");
 		
 		newLibraryMenuItem = new WebMenuItem("Create new...");
-		newLibraryMenuItem.setIcon(GifConstants.newAlbumIcon);
+		newLibraryMenuItem.setIcon(UIConstants.newAlbumIcon);
 		libraryMenu.add(newLibraryMenuItem);
 		newLibraryMenuItem.setLanguage("new");
 		
 		newLibraryFromMenuItem = new WebMenuItem("Create from folder...");
-		newLibraryFromMenuItem.setIcon(GifConstants.newAlbumFromIcon);
+		newLibraryFromMenuItem.setIcon(UIConstants.newAlbumFromIcon);
 		libraryMenu.add(newLibraryFromMenuItem);
 		newLibraryFromMenuItem.setLanguage("newfrom");
 		
 		importLibraryMenuItem = new WebMenuItem("Import...");
-		importLibraryMenuItem.setIcon(GifConstants.importAlbumIcon);
+		importLibraryMenuItem.setIcon(UIConstants.importAlbumIcon);
 		libraryMenu.add(importLibraryMenuItem);
 		importLibraryMenuItem.setLanguage("import");
 		
 		libraryMenu.addSeparator();
 		
 		addImageMenuItem = new WebMenuItem("Add image...");
-		addImageMenuItem.setIcon(GifConstants.addImageIcon);
+		addImageMenuItem.setIcon(UIConstants.addImageIcon);
 		addImageMenuItem.setEnabled(false);
 		libraryMenu.add(addImageMenuItem);
 		addImageMenuItem.setLanguage("add");
 		
 		addWebImageMenuItem = new WebMenuItem("Add web image...");
-		addWebImageMenuItem.setIcon(GifConstants.addWebImageIcon);
+		addWebImageMenuItem.setIcon(UIConstants.addWebImageIcon);
 		addWebImageMenuItem.setEnabled(false);
 		libraryMenu.add(addWebImageMenuItem);
 		addWebImageMenuItem.setLanguage("addweb");
 		
 		addFolderMenuItem = new WebMenuItem("Add folder...");
-		addFolderMenuItem.setIcon(GifConstants.addFolderIcon);
+		addFolderMenuItem.setIcon(UIConstants.addFolderIcon);
 		addFolderMenuItem.setEnabled(false);
 		libraryMenu.add(addFolderMenuItem);
 		addFolderMenuItem.setLanguage("addfolder");
@@ -465,13 +477,13 @@ public class GifOrganizerUI extends CustomWebFrame
 		libraryMenu.addSeparator();
 		
 		manageLibrariesMenuItem = new WebMenuItem("Manage...");
-		manageLibrariesMenuItem.setIcon(GifConstants.manageAlbumsIcon);
+		manageLibrariesMenuItem.setIcon(UIConstants.manageAlbumsIcon);
 		manageLibrariesMenuItem.setEnabled(false);
 		libraryMenu.add(manageLibrariesMenuItem);
 		manageLibrariesMenuItem.setLanguage("manage");
 		
 		exportLibrariesMenuItem = new WebMenuItem("Export...");
-		exportLibrariesMenuItem.setIcon(GifConstants.exportAlbumIcon);
+		exportLibrariesMenuItem.setIcon(UIConstants.exportAlbumIcon);
 		exportLibrariesMenuItem.setEnabled(false);
 		libraryMenu.add(exportLibrariesMenuItem);
 		exportLibrariesMenuItem.setLanguage("export");
@@ -479,7 +491,7 @@ public class GifOrganizerUI extends CustomWebFrame
 		libraryMenu.addSeparator();
 		
 		exitMenuItem = new WebMenuItem("Exit");
-		exitMenuItem.setIcon(GifConstants.exitIcon);
+		exitMenuItem.setIcon(UIConstants.exitIcon);
 		libraryMenu.add(exitMenuItem);
 		exitMenuItem.setLanguage("exit");
 		
@@ -492,23 +504,38 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		//// Image size
 		WebMenu imageSizeMenu = new WebMenu("Image size");
-		imageSizeMenu.setEnabled(false);
 		viewMenu.add(imageSizeMenu);
 		imageSizeMenu.setLanguage("imagesize");
+		LMU.registerContainer(imageSizeMenu, "imagesize");
+		
+		ButtonGroup sizeButtonGroup = new ButtonGroup();
+		
+		smallSizeMenuItem = new WebRadioButtonMenuItem("Small");
+		imageSizeMenu.add(smallSizeMenuItem);
+		sizeButtonGroup.add(smallSizeMenuItem);
+		smallSizeMenuItem.setLanguage("small");
+		
+		normalSizeMenuItem = new WebRadioButtonMenuItem("Normal");
+		imageSizeMenu.add(normalSizeMenuItem);
+		sizeButtonGroup.add(normalSizeMenuItem);
+		normalSizeMenuItem.setLanguage("normal");
+		
+		largeSizeMenuItem = new WebRadioButtonMenuItem("Large");
+		imageSizeMenu.add(largeSizeMenuItem);
+		sizeButtonGroup.add(largeSizeMenuItem);
+		largeSizeMenuItem.setLanguage("large");
 		
 		viewMenu.addSeparator();
 		
 		showStarredMenuItem = new WebCheckBoxMenuItem("Show starred only");
-		showStarredMenuItem.setIcon(GifConstants.noStarIcon);
+		showStarredMenuItem.setIcon(UIConstants.noStarIcon);
 		viewMenu.add(showStarredMenuItem);
 		showStarredMenuItem.setLanguage("showstarred");
 		
 		showUntaggedMenuItem = new WebCheckBoxMenuItem("Show untagged only");
-		showUntaggedMenuItem.setIcon(GifConstants.noTagIcon);
+		showUntaggedMenuItem.setIcon(UIConstants.noTagIcon);
 		viewMenu.add(showUntaggedMenuItem);
 		showUntaggedMenuItem.setLanguage("showuntagged");
-		
-		//TODO: fill image size menu
 		
 		// Settings menu
 		
@@ -563,13 +590,13 @@ public class GifOrganizerUI extends CustomWebFrame
 		LMU.registerContainer(aboutMenu, "about");
 		
 		aboutMenuItem = new WebMenuItem("About...");
-		aboutMenuItem.setIcon(GifConstants.aboutIcon);
+		aboutMenuItem.setIcon(UIConstants.aboutIcon);
 		aboutMenuItem.setEnabled(false);
 		aboutMenu.add(aboutMenuItem);
 		aboutMenuItem.setLanguage("about");
 		
 		changelogMenuItem = new WebMenuItem("Changelog...");
-		changelogMenuItem.setIcon(GifConstants.aboutIcon);
+		changelogMenuItem.setIcon(UIConstants.aboutIcon);
 		changelogMenuItem.setEnabled(false);
 		aboutMenu.add(changelogMenuItem);
 		changelogMenuItem.setLanguage("changelog");
@@ -612,6 +639,10 @@ public class GifOrganizerUI extends CustomWebFrame
 		addFolderMenuItem.addActionListener(evt -> controller.addImageFolder());
 		
 		// View menu
+		
+		smallSizeMenuItem.addItemListener(evt -> ui_setImageSize(evt, ItemSize.SMALL));
+		normalSizeMenuItem.addItemListener(evt -> ui_setImageSize(evt, ItemSize.NORMAL));
+		largeSizeMenuItem.addItemListener(evt -> ui_setImageSize(evt, ItemSize.LARGE));
 		
 		showStarredMenuItem.addItemListener(evt -> ui_setSearchFavorites(isSelected(evt)));
 		
@@ -768,7 +799,7 @@ public class GifOrganizerUI extends CustomWebFrame
 	
 	private void ui_changelog()
 	{
-		//TODO
+		IOUtil.openWebsite("https://github.com/TheEnigmaBlade/ScrapGIF/blob/master/CHANGES.md");
 	}
 	
 	private void ui_website()
@@ -784,6 +815,12 @@ public class GifOrganizerUI extends CustomWebFrame
 	private void ui_iconsWebsite()
 	{
 		IOUtil.openWebsite("http://p.yusukekamiyamane.com/");
+	}
+	
+	private void ui_setImageSize(ItemEvent evt, ItemSize size)
+	{
+		if(isSelected(evt))
+			controller.setImageSize(size);
 	}
 	
 	private void ui_setSearchFavorites(boolean selected)
@@ -928,6 +965,13 @@ public class GifOrganizerUI extends CustomWebFrame
 	public void setImageSize(ItemSize size)
 	{
 		itemPanel.setItemSize(size);
+		
+		SwingUtilities.invokeLater(() -> {
+			updateVisibleImages();
+			
+			itemPanel.revalidate();
+			itemPanel.repaint();
+		});
 	}
 	
 	public void refreshImageMenu()
@@ -1012,7 +1056,7 @@ public class GifOrganizerUI extends CustomWebFrame
 			});
 			
 			if(playSound)
-				playSoundEffect(GifConstants.uploadSuccessSound);
+				playSoundEffect(UIConstants.uploadSuccessSound);
 		}
 		else
 		{
