@@ -134,4 +134,10 @@ public class DraggableFlowLayout extends AbstractLayoutManager
 	{
 		dragIndex = index;
 	}
+
+	public void setGap(int gapH, int gapV)
+	{
+		this.gapH = gapH;
+		this.gapV = gapV;
+	}
 }

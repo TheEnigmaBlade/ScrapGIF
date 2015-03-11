@@ -6,10 +6,8 @@ public class ResponsivenessUtil
 {
 	public static void delayAction(int delay, final Runnable action)
 	{
-		Timer timer = new Timer(0, (evt) -> action.run());
-		timer.setInitialDelay(delay);
+		Timer timer = new Timer(delay, (evt) -> action.run());
 		timer.setRepeats(false);
 		timer.start();
-		
 	}
 }

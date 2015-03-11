@@ -17,12 +17,14 @@ import javax.swing.text.*;
 import com.alee.extended.filechooser.*;
 import com.alee.extended.label.*;
 import com.alee.extended.layout.*;
+import com.alee.extended.panel.*;
 import com.alee.extended.statusbar.*;
 import com.alee.global.StyleConstants;
 import com.alee.laf.*;
 import com.alee.laf.checkbox.*;
 import com.alee.laf.combobox.*;
 import com.alee.laf.filechooser.*;
+import com.alee.laf.label.*;
 import com.alee.laf.menu.*;
 import com.alee.laf.optionpane.*;
 import com.alee.laf.panel.*;
@@ -61,6 +63,8 @@ public class GifOrganizerUI extends CustomWebFrame
 	//// Main area
 	private WebScrollPane itemScrollPane;
 	private ItemPanel itemPanel;
+	private WebPanel itemMessagePanel;
+	private WebLabel itemMessageLabel;
 	
 	//// Bottom bar
 	private WebValueLabel imagesCount, imagesTotal;
@@ -68,7 +72,7 @@ public class GifOrganizerUI extends CustomWebFrame
 	
 	//// Menu bar
 	
-	private WebMenuItem newLibraryMenuItem, newLibraryFromMenuItem, importLibraryMenuItem, exportLibrariesMenuItem, manageLibrariesMenuItem, exitMenuItem;
+	private WebMenuItem newLibraryMenuItem, importLibraryMenuItem, manageLibrariesMenuItem, exitMenuItem;
 	private WebMenuItem addImageMenuItem, addWebImageMenuItem, addFolderMenuItem;
 	private WebCheckBoxMenuItem showStarredMenuItem, showUntaggedMenuItem, checkNewImagesMenuItem, useNativeFrameMenuItem;
 	private WebRadioButtonMenuItem smallSizeMenuItem, normalSizeMenuItem, largeSizeMenuItem;
@@ -172,7 +176,15 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		itemPanel = new ItemPanel(controller);
 		
-		itemScrollPane = new WebScrollPane(itemPanel, true, true);
+		itemMessageLabel = new WebLabel("Test");
+		itemMessageLabel.setForeground(itemPanel.getBackground().darker());
+		itemMessageLabel.setFontSize(36);
+		itemMessageLabel.setBoldFont();
+		itemMessagePanel = new CenterPanel(itemMessageLabel);
+		
+		WebOverlay itemPanelOverlay = new WebOverlay(itemPanel, itemMessagePanel);
+		
+		itemScrollPane = new WebScrollPane(itemPanelOverlay, true, true);
 		itemScrollPane.setVerticalScrollBarPolicy(WebScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 		itemScrollPane.getVerticalScrollBar().setUnitIncrement(20);
 		itemScrollPane.getVerticalScrollBar().setBlockIncrement(100);
@@ -247,8 +259,9 @@ public class GifOrganizerUI extends CustomWebFrame
 			@Override
 			public void mouseExited(MouseEvent evt)
 			{
-				stopAnimations();
-				hoveredImage = null;
+				JFrame source = (JFrame)evt.getSource();
+				if(source.getMousePosition() != null)
+					stopAnimations();
 			}
 		});
 		
@@ -315,6 +328,19 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		//Items
 		
+		itemPanel.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseEntered(MouseEvent evt)
+			{
+				if(hoveredImage != null)
+				{
+					hoveredImage.stopAnimation();
+					hoveredImage.closeMenu();
+					hoveredImage = null;
+				}
+			}
+		});
+		
 		itemPanel.setItemMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent evt)
@@ -324,6 +350,7 @@ public class GifOrganizerUI extends CustomWebFrame
 					ItemImage image = (ItemImage)evt.getSource();
 					if(!image.isMenuOpen())
 					{
+						image.stopLoading(true);
 						image.stopAnimation();
 						image.openMenu();
 					}
@@ -333,7 +360,7 @@ public class GifOrganizerUI extends CustomWebFrame
 			@Override
 			public void mouseEntered(MouseEvent evt)
 			{
-				ItemImage item = (ItemImage)evt.getSource();
+				/*ItemImage item = (ItemImage)evt.getSource();
 				if(!item.isMenuOpen())
 				{
 					stopAnimations();
@@ -345,20 +372,39 @@ public class GifOrganizerUI extends CustomWebFrame
 							hoveredImage = item;
 						}
 					});
+				}*/
+				
+				ItemImage image = (ItemImage)evt.getSource();
+				if(!image.isMenuOpen())		// Prevents the animation from starting when re-entering the image from the menu buttons
+				{
+					if(hoveredImage != null)
+					{
+						hoveredImage.stopAnimation();
+						hoveredImage.closeMenu();
+					}
+					hoveredImage = image;
+					
+					ResponsivenessUtil.delayAction(UIConstants.ANIMATION_DELAY, () -> {
+						if(image.getMousePosition() != null)
+						{
+							controller.animateImage(image.getData());
+						}
+					});
 				}
 			}
 			
 			@Override
 			public void mouseExited(MouseEvent evt)
 			{
-				ItemImage item = (ItemImage)evt.getSource();
+				// Tracking mouse exits for individual images is EXTREMELY unreliable
+				/*ItemImage item = (ItemImage)evt.getSource();
 				if(!item.contains(evt.getPoint()))
 				{
 					item.stopAnimation();
 					item.closeMenu();
 					if(item.equals(hoveredImage))
 						hoveredImage = null;
-				}
+				}*/
 			}
 		});
 		
@@ -366,8 +412,11 @@ public class GifOrganizerUI extends CustomWebFrame
 			@Override
 			public void adjustmentValueChanged(AdjustmentEvent evt)
 			{
-				stopAnimations();
-				updateVisibleImages();
+				if(evt.getValue() != 0)
+				{
+					stopAnimations();
+					updateVisibleImages();
+				}
 			}
 		});
 		
@@ -441,13 +490,9 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		newLibraryMenuItem = new WebMenuItem("Create new...");
 		newLibraryMenuItem.setIcon(UIConstants.newAlbumIcon);
+		newLibraryMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_MASK));
 		libraryMenu.add(newLibraryMenuItem);
 		newLibraryMenuItem.setLanguage("new");
-		
-		newLibraryFromMenuItem = new WebMenuItem("Create from folder...");
-		newLibraryFromMenuItem.setIcon(UIConstants.newAlbumFromIcon);
-		libraryMenu.add(newLibraryFromMenuItem);
-		newLibraryFromMenuItem.setLanguage("newfrom");
 		
 		importLibraryMenuItem = new WebMenuItem("Import...");
 		importLibraryMenuItem.setIcon(UIConstants.importAlbumIcon);
@@ -482,16 +527,14 @@ public class GifOrganizerUI extends CustomWebFrame
 		libraryMenu.add(manageLibrariesMenuItem);
 		manageLibrariesMenuItem.setLanguage("manage");
 		
-		exportLibrariesMenuItem = new WebMenuItem("Export...");
-		exportLibrariesMenuItem.setIcon(UIConstants.exportAlbumIcon);
-		exportLibrariesMenuItem.setEnabled(false);
-		libraryMenu.add(exportLibrariesMenuItem);
-		exportLibrariesMenuItem.setLanguage("export");
-		
 		libraryMenu.addSeparator();
 		
 		exitMenuItem = new WebMenuItem("Exit");
 		exitMenuItem.setIcon(UIConstants.exitIcon);
+		if(SystemUtils.isMac())
+			exitMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.META_MASK));
+		else
+			exitMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F4, InputEvent.ALT_MASK));
 		libraryMenu.add(exitMenuItem);
 		exitMenuItem.setLanguage("exit");
 		
@@ -591,13 +634,11 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		aboutMenuItem = new WebMenuItem("About...");
 		aboutMenuItem.setIcon(UIConstants.aboutIcon);
-		aboutMenuItem.setEnabled(false);
 		aboutMenu.add(aboutMenuItem);
 		aboutMenuItem.setLanguage("about");
 		
 		changelogMenuItem = new WebMenuItem("Changelog...");
 		changelogMenuItem.setIcon(UIConstants.aboutIcon);
-		changelogMenuItem.setEnabled(false);
 		aboutMenu.add(changelogMenuItem);
 		changelogMenuItem.setLanguage("changelog");
 		
@@ -622,11 +663,7 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		newLibraryMenuItem.addActionListener(evt -> ui_newLibrary());
 		
-		newLibraryFromMenuItem.addActionListener(evt -> ui_newLibraryFrom());
-		
 		importLibraryMenuItem.addActionListener(evt -> ui_importLibrary());
-		
-		exportLibrariesMenuItem.addActionListener(evt -> ui_exportLibrary());
 		
 		manageLibrariesMenuItem.addActionListener(evt -> controller.manageLibraries());
 		
@@ -719,33 +756,26 @@ public class GifOrganizerUI extends CustomWebFrame
 	{
 		Log.debug("Creating new library");
 		
-		File dir = WebDirectoryChooser.showDialog(this, "Select parent folder");
+		// Get directory
+		File dir = WebDirectoryChooser.showDialog(this, "Select library folder");
 		if(dir == null)
 		{
 			Log.debug("No library parent folder selected");
 			return;
 		}
 		
-		String name = getLibraryName();
-		if(name == null)
-		{
-			Log.debug("No library name given");
-			return;
-		}
-		
-		controller.createLibrary(dir, name);
-	}
-	
-	private void ui_newLibraryFrom()
-	{
-		Log.debug("Creating new library from");
-		
-		File dir = WebDirectoryChooser.showDialog(this, "Select library folder");
-		if(dir == null)
-		{
-			Log.debug("No library folder selected");
-			return;
-		}
+		// Check if it contains supported images and ask to import
+		boolean createFrom = false;
+		File[] files = dir.listFiles();
+		for(File file : files)
+			if(!file.isDirectory() && ImageLoader.IMAGE_FILE_FILTER.accept(file))
+			{
+				createFrom = WebOptionPane.showConfirmDialog(this,
+						"The selected folder contains supported images.\nDo you want to create a library using this folder?",
+						"Import folder?",
+						WebOptionPane.YES_NO_OPTION, WebOptionPane.QUESTION_MESSAGE) == WebOptionPane.YES_OPTION;
+				break;
+			}
 		
 		String name = getLibraryName();
 		if(name == null)
@@ -754,7 +784,10 @@ public class GifOrganizerUI extends CustomWebFrame
 			return;
 		}
 		
-		controller.createLibraryFrom(dir, name);
+		if(createFrom)
+			controller.createLibraryFrom(dir, name);
+		else
+			controller.createLibrary(dir, name);
 	}
 	
 	private String getLibraryName()
@@ -787,14 +820,9 @@ public class GifOrganizerUI extends CustomWebFrame
 		controller.importLibrary(dir);
 	}
 	
-	private void ui_exportLibrary()
-	{
-		//TODO
-	}
-	
 	private void ui_about()
 	{
-		//TODO open about dialog
+		AboutDialog.open(this);
 	}
 	
 	private void ui_changelog()
@@ -860,6 +888,12 @@ public class GifOrganizerUI extends CustomWebFrame
 		// Re-enable listeners
 		for(ItemListener list : lists)
 			libraryComboBox.addItemListener(list);
+		
+		// Update other UI
+		if(libraryComboBoxModel.getSize() == 0)
+			showNoLibrariesMessage();
+		else
+			setImageAreaMessage(null);
 	}
 	
 	public void selectLibrary(Library library)
@@ -929,19 +963,22 @@ public class GifOrganizerUI extends CustomWebFrame
 		visibleImages.clear();
 		
 		addAllImages(datas);
+		
+		// Update other UI
+		if(datas.size() == 0)
+			showNoImagesMessage();
+		else
+			setImageAreaMessage(null);
 	}
 	
 	public void removeImage(ImageData data)
 	{
 		itemPanel.removeImage(data.getId());
 		updateNumImages();
+		if(itemPanel.getNumImages() == 0)
+			showNoImagesMessage();
 		
-		SwingUtilities.invokeLater(() -> {
-			updateVisibleImages();
-			
-			itemPanel.revalidate();
-			itemPanel.repaint();
-		});
+		refreshImagePanel();
 	}
 	
 	public void updatedThumbnail(ImageData data)
@@ -949,12 +986,12 @@ public class GifOrganizerUI extends CustomWebFrame
 		itemPanel.updatedThumbnail(data);
 	}
 	
-	public void setImageItemLoading(String id, boolean loading)
+	public void setImageItemLoading(ImageData data, boolean loading)
 	{
 		if(loading)
-			itemPanel.setItemLoading(id);
+			itemPanel.setItemLoading(data.getId());
 		else
-			itemPanel.stopItemLoading(id);
+			itemPanel.stopItemLoading(data.getId());
 	}
 	
 	public void setImageItemAnimating(String id, ImageFrame[] frames)
@@ -965,18 +1002,11 @@ public class GifOrganizerUI extends CustomWebFrame
 	public void setImageSize(ItemSize size)
 	{
 		itemPanel.setItemSize(size);
-		
-		SwingUtilities.invokeLater(() -> {
-			updateVisibleImages();
-			
-			itemPanel.revalidate();
-			itemPanel.repaint();
-		});
+		refreshImagePanel();
 	}
 	
 	public void refreshImageMenu()
 	{
-		//hoveredImage.closeMenu();
 		if(hoveredImage != null && hoveredImage.isMenuOpen())
 			hoveredImage.openMenu();
 	}
@@ -1178,7 +1208,10 @@ public class GifOrganizerUI extends CustomWebFrame
 			{
 				ItemImage image = it.next();
 				if(updateImageVisibility(image, true))
+				{
 					it.remove();
+					controller.imageHidden(image.getData());
+				}
 			}
 		}
 		
@@ -1187,6 +1220,15 @@ public class GifOrganizerUI extends CustomWebFrame
 		for(ItemImage image : nonVisibleImages)
 			updateImageVisibility(image, false);
 		revalidate();
+	}
+	
+	private void refreshImagePanel()
+	{
+		SwingUtilities.invokeLater(() -> {
+			itemPanel.doLayout();
+			updateVisibleImages();
+			itemPanel.repaint();
+		});
 	}
 	
 	private boolean updateImageVisibility(ItemImage image, boolean previouslyVisible)
@@ -1208,6 +1250,23 @@ public class GifOrganizerUI extends CustomWebFrame
 		}
 		
 		return false;
+	}
+	
+	private void setImageAreaMessage(String message)
+	{
+		if(message != null)
+			itemMessageLabel.setText(message);
+		itemMessagePanel.setVisible(message != null);
+	}
+	
+	public void showNoLibrariesMessage()
+	{
+		setImageAreaMessage("Create a new library from the file menu");
+	}
+	
+	public void showNoImagesMessage()
+	{
+		setImageAreaMessage("Drag images here to add");
 	}
 	
 	// Dialog requests

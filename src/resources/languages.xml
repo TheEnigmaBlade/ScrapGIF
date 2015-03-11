@@ -1,4 +1,4 @@
-<Dictionary name="GIF Organizer" prefix="giforg">
+<Dictionary name="ScrapGIF" author="Enigma" prefix="giforg">
 
 	<!-- General -->
 	<record key="title">
@@ -16,9 +16,6 @@
 			<record key="new">
 				<value lang="en" mnemonic="n">Create new...</value>
 			</record>
-			<record key="newfrom">
-				<value lang="en" mnemonic="f">Create from folder...</value>
-			</record>
 			<record key="import">
 				<value lang="en" mnemonic="i">Import...</value>
 			</record>
@@ -29,7 +26,7 @@
 				<value lang="en" mnemonic="w">Add web image...</value>
 			</record>
 			<record key="addfolder">
-				<value lang="en" mnemonic="o">Add folder...</value>
+				<value lang="en" mnemonic="o">Add from folder...</value>
 			</record>
 			<record key="manage">
 				<value lang="en" mnemonic="m">Manage...</value>
@@ -145,6 +142,16 @@
 			<record key="no_service">
 				<value lang="en">Copy failed: no supported service is available</value>
 			</record>
+		</Dictionary>
+	</Dictionary>
+	
+	<!-- Dialogs -->
+	<Dictionary prefix="dialog">
+		<Dictionary prefix="about">
+			<record key="title">
+				<value lang="en">About ScrapGIF</value>
+			</record>
+			
 		</Dictionary>
 	</Dictionary>
 </Dictionary>

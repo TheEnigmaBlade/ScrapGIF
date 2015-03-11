@@ -28,6 +28,9 @@ import net.enigmablade.gif.util.*;
 
 public class GifOrganizer implements UIController, FileSystemAccessor
 {
+	public static final int VERSION = 1500;
+	public static final String VERSION_STR = "0.5 dev";
+	
 	private Config config;
 	
 	private GifOrganizerUI view;
@@ -40,6 +43,8 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 	
 	private SearchManager search;
 	
+	private Map<ImageData, SwingWorker<?, ?>> thumbnailWorkers, imageWorkers;
+	
 	// Initialization
 	
 	public GifOrganizer(Config config)
@@ -47,6 +52,9 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 		this.config = config;
 		view = new GifOrganizerUI(this, config);
 		search = new SearchManager();
+		
+		thumbnailWorkers = new HashMap<>();
+		imageWorkers = new HashMap<>();
 		
 		initSettings();
 	}
@@ -207,9 +215,29 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 	{
 		ImageFrame[] frames = imageCache.get(image.getId());
 		if(frames == null)
-			new ImageLoaderWorker(image).execute();
+		{
+			view.setImageItemLoading(image, true);
+			SwingWorker<?, ?> worker = new ImageLoaderWorker(image);
+			imageWorkers.put(image, worker);
+			worker.execute();
+		}
 		else
 			animateImage(image, frames);
+	}
+	
+	@Override
+	public void imageHidden(ImageData image)
+	{
+		if(thumbnailWorkers.containsKey(image))
+		{
+			SwingWorker<?, ?> worker = thumbnailWorkers.remove(image);
+			worker.cancel(true);
+		}
+		if(imageWorkers.containsKey(image))
+		{
+			SwingWorker<?, ?> worker = imageWorkers.remove(image);
+			worker.cancel(true);
+		}
 	}
 	
 	@Override
@@ -370,8 +398,10 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 	@Override
 	public void loadThumbnail(ImageData image)
 	{
-		view.setImageItemLoading(image.getId(), true);
-		new ThumbnailLoaderWorker(image).execute();
+		view.setImageItemLoading(image, true);
+		SwingWorker<?, ?> worker = new ThumbnailLoaderWorker(image);
+		thumbnailWorkers.put(image, worker);
+		worker.execute();
 	}
 	
 	@Override
@@ -600,12 +630,16 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 		@Override
 		protected void done()
 		{
-			view.setImageItemLoading(image.getId(), false);
+			view.setImageItemLoading(image, false);
 			
 			try
 			{
 				image.setThumbnail(get());
 				view.updatedThumbnail(image);
+			}
+			catch(CancellationException e)
+			{
+				// Ignore, canceled thumbnail load
 			}
 			catch(InterruptedException | ExecutionException e)
 			{
@@ -616,19 +650,17 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 	
 	private class ImageLoaderWorker extends SwingWorker<ImageFrame[], Void>
 	{
-		private ImageData item;
+		private ImageData image;
 		
 		public ImageLoaderWorker(ImageData item)
 		{
-			this.item = item;
+			this.image = item;
 		}
 		
 		@Override
 		protected ImageFrame[] doInBackground() throws IOException
 		{
-			SwingUtilities.invokeLater(() -> view.setImageItemLoading(item.getId(), true));
-			
-			File file = currentLibrary.getImagePath(item).toFile();
+			File file = currentLibrary.getImagePath(image).toFile();
 			if(!file.exists() || !file.isFile())
 			{
 				Log.error("Bad file: "+file.getAbsolutePath());
@@ -638,7 +670,7 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 			ImageLoader loader = ImageLoaders.getLoader(IOUtil.getFileExtension(file));
 			ImageFrame[] frames = loader.loadImage(file);
 			if(frames != null)
-				imageCache.store(item.getId(), frames);
+				imageCache.store(image.getId(), frames);
 			return frames;
 		}
 		
@@ -647,7 +679,11 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 		{
 			try
 			{
-				animateImage(item, get());
+				animateImage(image, get());
+			}
+			catch(CancellationException e)
+			{
+				// Ignore, load canceled
 			}
 			catch(InterruptedException | ExecutionException e)
 			{

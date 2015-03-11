@@ -1,7 +1,6 @@
 package net.enigmablade.gif.ui.components.item;
 
 import java.awt.*;
-import java.awt.event.*;
 import java.text.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -20,6 +19,7 @@ import com.alee.managers.tooltip.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.ui.*;
 import net.enigmablade.gif.ui.components.web.*;
+import net.enigmablade.gif.ui.renderers.*;
 import net.enigmablade.gif.util.*;
 
 public class ItemImage extends CustomWebOverlay
@@ -48,9 +48,7 @@ public class ItemImage extends CustomWebOverlay
 	private static CustomWebButton menuRemove, menuFolder;
 	private static Consumer<ImageData> uploadAction, tagAction, starAction, removeAction, folderAction;
 	
-	private ImageFrame[] frames;
 	private boolean isVisible = false;
-	private boolean isSizeSet = false;
 	private boolean menuOpen = false;
 	
 	private Animator animator;
@@ -62,9 +60,7 @@ public class ItemImage extends CustomWebOverlay
 	{
 		this.controller = controller;
 		this.data = data;
-		this.frames = null;
 		setSize(size);
-		resetSizeSet();
 		
 		initComponents();
 		initListeners();
@@ -86,16 +82,21 @@ public class ItemImage extends CustomWebOverlay
 				int imageX = 0, imageW = getWidth();
 				if(data != null)
 				{
-					imageW = data.getWidth(getHeight());
-					imageX = (getWidth() - imageW)/2;
+					int height = getHeight();
+					int displayW = data.getWidth(height);
+					if(displayW < UIConstants.MIN_IMAGE_WIDTH || displayW > UIConstants.MAX_IMAGE_WIDTH)
+					{
+						imageW = displayW;
+						imageX = (getWidth() - displayW)/2;
+					}
 				}
 				
 				// Draw a frame from an available animation OR the thumbnail
 				g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, UIConstants.PREVIEW_INTERPOLATION);
 				
-				if(animator != null && frames != null && frames[animator.getFrame()] != null)	// frames shouldn't be null when animator is non-null, but sometimes it was...
+				if(animator != null)	// frames shouldn't be null when animator is non-null, but sometimes it was...
 					// Animation
-					g2.drawImage(frames[animator.getFrame()].getImage(), imageX, 0, imageW, getHeight(), null);
+					g2.drawImage(animator.getFrame().getImage(), imageX, 0, imageW, getHeight(), null);
 				else if(data != null)
 					// Thumbnail
 					g2.drawImage(data.getThumbnail(), imageX, 0, imageW, getHeight(), null);
@@ -107,18 +108,20 @@ public class ItemImage extends CustomWebOverlay
 		loadOverlay.setConsumeEvents(false);
 		loadOverlay.setProgressColor(imagePanel.getBackground());
 		loadOverlay.setSpeed(2);
+		
+		setBorder(new DropShadowBorder(UIConstants.IMAGE_SHADOW_COLOR, 5, UIConstants.IMAGE_SHADOW_TRANS, 12));
 	}
 	
 	private void initListeners()
 	{
 		setRequestFocusEnabled(true);
-		addMouseListener(new MouseAdapter() {
+		/*addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent evt)
 			{
 				requestFocus();
 			}
-		});
+		});*/
 	}
 	
 	public static void initStaticComponents()
@@ -217,7 +220,9 @@ public class ItemImage extends CustomWebOverlay
 		menuRemove.setDrawShade(false);
 		menuRemove.setDrawFocus(false);
 		menuRemove.setRolloverShine(true);
+		menuRemove.setRolloverDecoratedOnly(true);
 		menuRemove.setDrawSides(false, false, false, false);
+		menuRemove.setPreferredHeight(24);
 		
 		menuFolder = new CustomWebButton("Show file", UIConstants.folderClosedIcon);
 		menuFolder.setRolloverIcon(UIConstants.folderOpenIcon);
@@ -225,10 +230,12 @@ public class ItemImage extends CustomWebOverlay
 		menuFolder.setDrawShade(false);
 		menuFolder.setDrawFocus(false);
 		menuFolder.setRolloverShine(true);
+		menuFolder.setRolloverDecoratedOnly(true);
 		menuFolder.setDrawSides(false, false, false, false);
+		menuFolder.setPreferredHeight(24);
 		
 		menuMorePopup = new WebButtonPopup(menuMore, PopupWay.leftUp);
-		menuMorePopup.setContent(new GroupPanel(0, false, menuRemove, menuFolder));
+		menuMorePopup.setContent(new GroupPanel(4, false, new WebPanel(), menuRemove, menuFolder, new WebPanel()));
 		
 		TooltipManager.addTooltip(menuUpload, "Upload image", TooltipWay.up);
 		TooltipManager.addTooltip(menuTags, "Add tag", TooltipWay.up);
@@ -260,12 +267,15 @@ public class ItemImage extends CustomWebOverlay
 	
 	public void setLoading()
 	{
-		Log.debug("Starting loading animation");
-		
-		loadOverlay.setShowLoad(true);
-		setComponent(loadOverlay);
-		loadOverlay.setComponent(imagePanel);
-		revalidate();
+		if(!menuOpen)
+		{
+			Log.debug("Starting loading animation");
+			
+			loadOverlay.setShowLoad(true);
+			setComponent(loadOverlay);
+			loadOverlay.setComponent(imagePanel);
+			//revalidate();
+		}
 	}
 	
 	public void stopLoading(boolean force)
@@ -281,24 +291,14 @@ public class ItemImage extends CustomWebOverlay
 	{
 		Log.debug("Starting GIF animation");
 		
-		this.frames = Objects.requireNonNull(frames);
-		
 		stopLoading(false);
 		
 		if(!menuOpen)
 		{
-			synchronized(animating)
-			{
-				animating.forEach(thread -> thread.stopAnimation());
-				animating.clear();
-				
-				animator = new Animator(this, frames);
-				animating.add(this);
-			}
+			stopAnimations();
 			
-			Thread animatorThread = new Thread(animator);
-			animatorThread.setDaemon(true);
-			animatorThread.start();
+			animator = createAnimator(this, frames);
+			startAnimator(animator);
 		}
 	}
 	
@@ -309,7 +309,6 @@ public class ItemImage extends CustomWebOverlay
 		if(animator != null)
 			animator.stopAnimation();
 		animator = null;
-		frames = null;
 		
 		if(isVisible)
 			SwingUtilities.invokeLater(() -> repaint());
@@ -320,6 +319,7 @@ public class ItemImage extends CustomWebOverlay
 		synchronized(animating)
 		{
 			animating.forEach(image -> {
+				image.stopLoading(false);
 				image.stopAnimation();
 			});
 			animating.clear();
@@ -396,24 +396,34 @@ public class ItemImage extends CustomWebOverlay
 	
 	public void setSize(ItemSize size)
 	{
-		//if(!isSizeSet)
-		{
-			if(data != null)
-				setPreferredSize(Math.min(Math.max(data.getWidth(size.getSize()), UIConstants.MIN_IMAGE_WIDTH), UIConstants.MAX_IMAGE_WIDTH), size.getSize());
-			if(loadOverlay != null)
-				loadOverlay.setProgressWidth(size.getLoadSize());
-			isSizeSet = true;
-		}
-	}
-	
-	public void resetSizeSet()
-	{
-		isSizeSet = false;
+		if(data != null)
+			setPreferredSize(Math.min(Math.max(data.getWidth(size.getSize()), UIConstants.MIN_IMAGE_WIDTH), UIConstants.MAX_IMAGE_WIDTH), size.getSize());
+		if(loadOverlay != null)
+			loadOverlay.setProgressWidth(size.getLoadSize());
 	}
 	
 	public ImageData getData()
 	{
 		return data;
+	}
+	
+	// Animation helpers
+	
+	public static Animator createAnimator(ItemImage image, ImageFrame[] frames)
+	{
+		Animator animator = new Animator(image, frames);
+		synchronized(animating)
+		{
+			animating.add(image);
+		}
+		return animator;
+	}
+	
+	public static void startAnimator(Animator animator)
+	{
+		Thread animatorThread = new Thread(animator);
+		animatorThread.setDaemon(true);
+		animatorThread.start();
 	}
 	
 	// Other

@@ -7,30 +7,35 @@ import net.enigmablade.gif.*;
 public class UIConstants
 {
 	// Sizes
-	public static final int THUMBNAIL_SIZE_SMALL	= 100,
-							THUMBNAIL_SIZE_NORMAL	= 150,
-							THUMBNAIL_SIZE_LARGE	= 200;
+	public static final int THUMBNAIL_SIZE_SMALL	= 150,
+							THUMBNAIL_SIZE_NORMAL	= 200,
+							THUMBNAIL_SIZE_LARGE	= 250;
 	
-	public static final int THUMBNAIL_LOAD_SMALL	= 15,
-							THUMBNAIL_LOAD_NORMAL	= 20,
-							THUMBNAIL_LOAD_LARGE	= 25;
+	public static final int THUMBNAIL_LOAD_SMALL	= 10,
+							THUMBNAIL_LOAD_NORMAL	= 16,
+							THUMBNAIL_LOAD_LARGE	= 22;
+	
+	public static final int IMAGE_GAP_SMALL		= 10,
+							IMAGE_GAP_NORMAL	= 15,
+							IMAGE_GAP_LARGE		= 20;
 	
 	public static final int MIN_IMAGE_WIDTH = 150,
-							MAX_IMAGE_WIDTH = MIN_IMAGE_WIDTH*3;
+							MAX_IMAGE_WIDTH = MIN_IMAGE_WIDTH*4;
 	
 	public static final int IMAGE_BUTTON_HEIGHT = 40;
 	
 	// Performance
-	public static final int ANIMATION_DELAY = 150;
+	public static final int ANIMATION_DELAY = 125;
 	
 	public static final Object PREVIEW_INTERPOLATION = RenderingHints.VALUE_INTERPOLATION_BILINEAR;
 	
 	// Colors
 	public static Color IMAGE_BACKGROUND = new Color(200, 200, 200);
+	public static Color IMAGE_SHADOW_COLOR = new Color(20, 20, 20);
+	public static float IMAGE_SHADOW_TRANS = 0.6f;
 	
 	// Icons
 	public static ImageIcon newAlbumIcon		= ResourceLoader.loadIcon("photo-album--plus"),
-							newAlbumFromIcon	= ResourceLoader.loadIcon("blue-folder-import"),
 							importAlbumIcon		= ResourceLoader.loadIcon("photo-album--arrow"),
 							exportAlbumIcon		= ResourceLoader.loadIcon("application-export"),
 							manageAlbumsIcon	= null,

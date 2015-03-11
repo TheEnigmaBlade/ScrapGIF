@@ -46,8 +46,8 @@ public class Animator implements Runnable
 		frame.set(0);
 	}
 	
-	public int getFrame()
+	public ImageFrame getFrame()
 	{
-		return frame.get();
+		return frames[frame.get()];
 	}
 }

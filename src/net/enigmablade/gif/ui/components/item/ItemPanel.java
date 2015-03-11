@@ -19,8 +19,8 @@ public class ItemPanel extends CustomWebPanel
 	/*private Component dragComponent;
 	private int dragComponentIndex;
 	
-	private DraggableFlowLayout layout;
 	private Point mousePoint;*/
+	private DraggableFlowLayout layout;
 	
 	//Listeners
 	
@@ -42,7 +42,7 @@ public class ItemPanel extends CustomWebPanel
 		setFocusable(true);
 		setMinimumWidth(0);
 		setPreferredWidth(0);
-		setLayout(/*layout = */new DraggableFlowLayout(20, 20));
+		setLayout(layout = new DraggableFlowLayout(itemSize.getGap(), itemSize.getGap()));
 		
 		initData();
 		initListeners();
@@ -273,6 +273,9 @@ public class ItemPanel extends CustomWebPanel
 		{
 			Log.debug("Updating items' size");
 			this.itemSize = itemSize;
+			// Update layout
+			layout.setGap(itemSize.getGap(), itemSize.getGap());
+			// Update individual items
 			for(ItemImage img : itemsById.values())
 				img.setSize(itemSize);
 		}

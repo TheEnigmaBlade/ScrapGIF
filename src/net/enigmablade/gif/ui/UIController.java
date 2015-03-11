@@ -17,6 +17,8 @@ public interface UIController
 	
 	public void animateImage(ImageData item);
 	
+	public void imageHidden(ImageData image);
+	
 	public void uploadImage(ImageData image);
 	
 	public void removeImage(ImageData image);
