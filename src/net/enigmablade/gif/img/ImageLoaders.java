@@ -4,11 +4,11 @@ import java.awt.image.*;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
+import java.util.stream.*;
 import javax.imageio.*;
 import com.alee.log.*;
 import com.alee.utils.*;
 import com.mortennobel.imagescaling.*;
-import net.enigmablade.gif.*;
 import net.enigmablade.gif.library.*;
 import net.enigmablade.gif.ui.*;
 import net.enigmablade.gif.util.*;
@@ -59,14 +59,19 @@ public class ImageLoaders
 	
 	// Accessors
 	
-	public static boolean supportsImageType(String ext)
+	public static boolean supportsImageExtension(String ext)
 	{
 		return loaders.containsKey(ext);
 	}
 	
-	public static Set<String> getSupportedImageTypes()
+	public static Set<String> getSupportedExtensions()
 	{
 		return Collections.unmodifiableSet(loaders.keySet());
+	}
+	
+	public static List<String> getSupportedTypes()
+	{
+		return loaders.values().stream().map((loader) -> loader.getTypeName()).collect(Collectors.toList());
 	}
 	
 	//Thumbnails
@@ -98,7 +103,8 @@ public class ImageLoaders
 			return null;
 		}
 		
-		BufferedImage thumbnail = scale(staticFrame.getImage(), UIConstants.THUMBNAIL_SIZE_NORMAL);
+		BufferedImage thumbnail = scale(staticFrame.getImage(), UIConstants.THUMBNAIL_SIZE_CREATE);
+		staticFrame.destroy();
 		saveThumbnail(thumbnail, thumbFile);
 		return thumbnail;
 	}

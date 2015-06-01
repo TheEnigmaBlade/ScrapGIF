@@ -3,12 +3,13 @@ package net.enigmablade.gif.services;
 import java.util.*;
 import com.alee.log.*;
 import com.alee.utils.*;
+import net.enigmablade.gif.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.util.*;
 
 public abstract class ServiceManager
 {
-	public static Map<String, Service> supportedServices;
+	private static Map<String, Service> supportedServices;
 	static
 	{
 		supportedServices = new HashMap<>();
@@ -31,31 +32,30 @@ public abstract class ServiceManager
 		}
 	}
 	
-	public static Service getService(String preferred, ImageData imageData, FileSystemAccessor fileSystem)
+	public static Service getService(String name)
 	{
-		return getService(Collections.singletonList(preferred), imageData, fileSystem);
+		return supportedServices.get(name);
 	}
 	
-	public static Service getService(List<String> preferred, ImageData imageData, FileSystemAccessor fileSystem)
+	public static boolean checkService(Service service, ImageData imageData, FileSystemAccessor fileSystem)
 	{
-		// Search preferred services
-		for(String pref : preferred)
+		if(service != null)
+			return service.accepts(imageData, fileSystem);
+		return false;
+	}
+	
+	public static Service getService(Config config, ImageData imageData, FileSystemAccessor fileSystem)
+	{
+		// Find and check the preferred service if possible
+		if(imageData != null)
 		{
-			Service service = supportedServices.get(pref);
-			
-			// Check image parameters if we need to
-			if(imageData != null)
+			String preferred = config.getPreferredService(IOUtil.getFileExtension(imageData.getPath()));
+			if(preferred != null)
 			{
-				// Check the preferred service if found
-				if(service != null)
-				{
-					if(service.accepts(imageData, fileSystem))
-						return service;
-				}
-			}
-			else
-			{
-				return service;
+				// Check preferred service
+				Service service = getService(preferred);
+				if(checkService(service, imageData, fileSystem))
+					return service;
 			}
 		}
 		
@@ -64,7 +64,7 @@ public abstract class ServiceManager
 		{
 			for(Service s2 : supportedServices.values())
 			{
-				if(s2.accepts(imageData, fileSystem))
+				if(checkService(s2, imageData, fileSystem))
 					return s2;
 			}
 		}
@@ -72,7 +72,22 @@ public abstract class ServiceManager
 		return null;
 	}
 	
-	public static Collection<Service> getServices()
+	public static List<Service> getSupportedServices(String ext)
+	{
+		ext = Objects.requireNonNull(ext).toLowerCase();
+		
+		List<Service> services = new LinkedList<>();
+		for(Service s : supportedServices.values())
+		{
+			Set<String> exts = s.getFileExtensions();
+			if(exts.isEmpty() || exts.contains(ext))
+				services.add(s);
+		}
+		
+		return services;
+	}
+	
+	public static Set<Service> getServices()
 	{
 		return Collections.unmodifiableSet(new HashSet<Service>(supportedServices.values()));
 	}
@@ -95,7 +110,7 @@ public abstract class ServiceManager
 	
 	public static String createUrl(ServiceLink link)
 	{
-		Service manager = ServiceManager.getService(link.getService(), null, null);
+		Service manager = ServiceManager.getService(link.getService());
 		if(manager == null)
 		{
 			Log.warn("Failed to create URL because a manager doesn't exist");

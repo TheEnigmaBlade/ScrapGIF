@@ -17,7 +17,7 @@ public class Gfycat extends Service
 	public Gfycat()
 	{
 		super("gfycat", "Gfycat", "https://gifaffe.s3.amazonaws.com/", "file");
-		setFileTypes("gif", "webm", "mp4");
+		setFileExtensions("gif", "webm", "mp4");
 	}
 	
 	@Override

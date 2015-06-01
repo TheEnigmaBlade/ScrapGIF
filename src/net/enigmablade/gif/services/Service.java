@@ -9,7 +9,7 @@ import com.alee.log.*;
 import net.enigmablade.gif.img.*;
 import net.enigmablade.gif.util.*;
 
-public abstract class Service
+public abstract class Service implements Comparable<Service>
 {
 	public static final String DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0";
 	
@@ -22,8 +22,8 @@ public abstract class Service
 	
 	protected Service(String id, String name, String uploadUrl, String formName)
 	{
-		this.id = id;
-		this.name = name;
+		this.id = Objects.requireNonNull(id);
+		this.name = Objects.requireNonNull(name);
 		this.uploadUrl = uploadUrl;
 		this.formName = formName;
 		this.maxFileSize = 0;
@@ -107,13 +107,36 @@ public abstract class Service
 		return maxFileSize;
 	}
 	
-	public void setFileTypes(String... fileTypes)
+	public void setFileExtensions(String... fileExt)
 	{
-		this.fileTypes = Arrays.asList(fileTypes).stream().map(ft -> ft.toLowerCase()).collect(Collectors.toSet());
+		this.fileTypes = Arrays.asList(fileExt).stream().map(ft -> ft.toLowerCase()).collect(Collectors.toSet());
 	}
 	
-	public Set<String> getFileTypes()
+	public Set<String> getFileExtensions()
 	{
 		return fileTypes;
+	}
+	
+	// Other methods
+	
+	@Override
+	public int hashCode()
+	{
+		return id.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o)
+	{
+		if(o == null || !(o instanceof Service))
+			return false;
+		Service s = (Service)o;
+		return s.id.equals(id);
+	}
+	
+	@Override
+	public int compareTo(Service s)
+	{
+		return name.compareTo(s.name);
 	}
 }

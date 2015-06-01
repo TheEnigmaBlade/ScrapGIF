@@ -28,8 +28,8 @@ import net.enigmablade.gif.util.*;
 
 public class GifOrganizer implements UIController, FileSystemAccessor
 {
-	public static final int VERSION = 1500;
-	public static final String VERSION_STR = "0.5 dev";
+	public static final int VERSION = 1510;
+	public static final String VERSION_STR = "0.5.1 dev";
 	
 	private Config config;
 	
@@ -80,6 +80,13 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 			int height = config.getWindowHeight();
 			if(width > 0 && height > 0)
 				view.setSize(width, height);
+			
+			int x = config.getWindowX();
+			int y = config.getWindowY();
+			if(x == Integer.MIN_VALUE || y == Integer.MIN_VALUE)
+				view.center();
+			else
+				view.setLocation(x, y);
 		}
 	}
 	
@@ -226,86 +233,6 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 	}
 	
 	@Override
-	public void imageHidden(ImageData image)
-	{
-		if(thumbnailWorkers.containsKey(image))
-		{
-			SwingWorker<?, ?> worker = thumbnailWorkers.remove(image);
-			worker.cancel(true);
-		}
-		if(imageWorkers.containsKey(image))
-		{
-			SwingWorker<?, ?> worker = imageWorkers.remove(image);
-			worker.cancel(true);
-		}
-	}
-	
-	@Override
-	public void uploadImage(ImageData image)
-	{
-		// Image already uploaded
-		if(image.getLinks().size() > 0)
-		{
-			Log.info("Image already uploaded");
-			ServiceLink link = image.getLinks().get(0);
-			String url = copyImageLink(link);
-			if(url != null)
-				view.notifyLinkCopy(ServiceError.NONE, false, () -> IOUtil.openWebsite(url));
-			else
-				view.notifyLinkCopy(ServiceError.NO_SERVICE, false, null);
-		}
-		// Upload image
-		else
-		{
-			view.startUploadProgress();
-			
-			Service service = ServiceManager.getService(config.getPreferredServices(), image, this);
-			if(service == null)
-			{
-				Log.warn("No service exists for image: type="+image.getType());
-				uploadImageCallback(ServiceError.NO_SERVICE, null, null);
-			}
-			else
-			{
-				service.upload(currentLibrary.getImagePath(image).toFile(), image, this::uploadImageCallback, this::uploadProgressCallback);
-			}
-		}
-	}
-	
-	public void uploadProgressCallback(int progress)
-	{
-		if(progress > 0)
-		{
-			if(progress < 100)
-				view.setProgress(progress);
-			else
-				view.endUploadProgress();
-		}
-	}
-	
-	public void uploadImageCallback(ServiceError error, ImageData image, ServiceLink link)
-	{
-		view.endProgress();
-		
-		// Upload successful
-		if(error == ServiceError.NONE)
-		{
-			image.addLink(link);
-			view.refreshImageMenu();
-			
-			String url = copyImageLink(link);
-			if(url != null)
-				view.notifyUpload(ServiceError.NONE, config.isSoundEffectsEnabled(), () -> IOUtil.openWebsite(url));
-			else
-				view.notifyUpload(ServiceError.NO_SERVICE, config.isSoundEffectsEnabled(), null);
-		}
-		else
-		{
-			view.notifyUpload(error, config.isSoundEffectsEnabled(), null);
-		}
-	}
-	
-	@Override
 	public void removeImage(ImageData image)
 	{
 		if(view.getRemoveImageConfirmation())
@@ -364,6 +291,75 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 		}
 	}
 	
+	//// Uploading
+	
+	@Override
+	public void uploadImage(ImageData image)
+	{
+		// Image already uploaded
+		if(image.getLinks().size() > 0)
+		{
+			Log.info("Image already uploaded");
+			ServiceLink link = image.getLinks().get(0);
+			String url = copyImageLink(link);
+			if(url != null)
+				view.notifyLinkCopy(ServiceError.NONE, false, () -> IOUtil.openWebsite(url));
+			else
+				view.notifyLinkCopy(ServiceError.NO_SERVICE, false, null);
+		}
+		// Upload image
+		else
+		{
+			view.startUploadProgress();
+			
+			Service service = ServiceManager.getService(config, image, this);
+			if(service == null)
+			{
+				Log.warn("No service exists for image: type="+image.getType());
+				uploadImageCallback(ServiceError.NO_SERVICE, null, null);
+			}
+			else
+			{
+				service.upload(currentLibrary.getImagePath(image).toFile(), image, this::uploadImageCallback, this::uploadProgressCallback);
+			}
+		}
+	}
+	
+	public void uploadProgressCallback(int progress)
+	{
+		if(progress > 0)
+		{
+			if(progress < 100)
+				view.setProgress(progress);
+			else
+				view.endUploadProgress();
+		}
+	}
+	
+	public void uploadImageCallback(ServiceError error, ImageData image, ServiceLink link)
+	{
+		view.endProgress();
+		
+		// Upload successful
+		if(error == ServiceError.NONE)
+		{
+			image.addLink(link);
+			view.refreshImageMenu();
+			
+			String url = copyImageLink(link);
+			if(url != null)
+				view.notifyUpload(ServiceError.NONE, config.isSoundEffectsEnabled(), () -> IOUtil.openWebsite(url));
+			else
+				view.notifyUpload(ServiceError.NO_SERVICE, config.isSoundEffectsEnabled(), null);
+		}
+		else
+		{
+			view.notifyUpload(error, config.isSoundEffectsEnabled(), null);
+		}
+	}
+	
+	//// Search
+	
 	@Override
 	public void setSearchFavorites(boolean enable)
 	{
@@ -395,6 +391,8 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 		view.setImages(images);
 	}
 	
+	//// Other
+	
 	@Override
 	public void loadThumbnail(ImageData image)
 	{
@@ -405,13 +403,33 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 	}
 	
 	@Override
+	public void imageHidden(ImageData image)
+	{
+		if(thumbnailWorkers.containsKey(image))
+		{
+			SwingWorker<?, ?> worker = thumbnailWorkers.remove(image);
+			worker.cancel(true);
+		}
+		if(imageWorkers.containsKey(image))
+		{
+			SwingWorker<?, ?> worker = imageWorkers.remove(image);
+			worker.cancel(true);
+		}
+	}
+	
+	@Override
 	public void close()
 	{
 		Log.info("Closing");
 		
-		config.setWindowSize(view.getWidth(), view.getHeight());
+		config.setWindowInfo(view.getX(), view.getY(), view.getWidth(), view.getHeight());
 		
+		view.dispose();
 		System.exit(0);
+		for(SwingWorker<?, ?> worker : thumbnailWorkers.values())
+			worker.cancel(true);
+		for(SwingWorker<?, ?> worker : imageWorkers.values())
+			worker.cancel(true);
 	}
 	
 	//// Menu bar
@@ -553,6 +571,12 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 	}
 	
 	@Override
+	public void setExtensionService(String extension, String service)
+	{
+		config.setPreferredServices(extension, service);
+	}
+	
+	@Override
 	public void setUseNativeFrame(boolean use)
 	{
 		config.setUseNativeFrame(use);
@@ -637,7 +661,7 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 				image.setThumbnail(get());
 				view.updatedThumbnail(image);
 			}
-			catch(CancellationException e)
+			catch(CancellationException | IndexOutOfBoundsException e)
 			{
 				// Ignore, canceled thumbnail load
 			}
@@ -773,6 +797,9 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 			this.dir = Objects.requireNonNull(dir);
 			if(!Files.isDirectory(dir, LinkOption.NOFOLLOW_LINKS))
 				throw new IllegalArgumentException("Given path isn't a directory");
+			
+			setDaemon(true);
+			setName("Directory Monitor");
 		}
 		
 		@SuppressWarnings("unchecked")

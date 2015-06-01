@@ -9,7 +9,8 @@ public class UIConstants
 	// Sizes
 	public static final int THUMBNAIL_SIZE_SMALL	= 150,
 							THUMBNAIL_SIZE_NORMAL	= 200,
-							THUMBNAIL_SIZE_LARGE	= 250;
+							THUMBNAIL_SIZE_LARGE	= 250,
+							THUMBNAIL_SIZE_CREATE	= THUMBNAIL_SIZE_NORMAL;
 	
 	public static final int THUMBNAIL_LOAD_SMALL	= 10,
 							THUMBNAIL_LOAD_NORMAL	= 16,

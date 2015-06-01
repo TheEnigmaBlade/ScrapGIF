@@ -75,10 +75,11 @@ public class GifOrganizerUI extends CustomWebFrame
 	private WebMenuItem newLibraryMenuItem, importLibraryMenuItem, manageLibrariesMenuItem, exitMenuItem;
 	private WebMenuItem addImageMenuItem, addWebImageMenuItem, addFolderMenuItem;
 	private WebCheckBoxMenuItem showStarredMenuItem, showUntaggedMenuItem, checkNewImagesMenuItem, useNativeFrameMenuItem;
-	private WebRadioButtonMenuItem smallSizeMenuItem, normalSizeMenuItem, largeSizeMenuItem;
 	private WebMenuItem aboutMenuItem, changelogMenuItem, siteMenuItem, webMenuItem, iconsMenuItem;
+	private WebMenu imageSizeMenu, uploadServiceMenu, languageMenu;
 	
-	private List<WebRadioButtonMenuItem> languageMenuItems;
+	private Map<String, List<WebRadioButtonMenuItem>> uploadServiceMenuItems;
+	private List<WebRadioButtonMenuItem> sizeMenuItems, languageMenuItems;
 	
 	// Models
 	private CollectionComboBoxModel<Library> libraryComboBoxModel;
@@ -117,10 +118,12 @@ public class GifOrganizerUI extends CustomWebFrame
 		initFrame();
 		initComponents();
 		initMenuBar();
+		initMenuBarDynamic();
 		initModels();
 		initSettings(config);
 		initListeners();
 		initMenuBarListeners();
+		initMenuBarDynamicListeners();
 		initFinish();
 	}
 	
@@ -129,7 +132,7 @@ public class GifOrganizerUI extends CustomWebFrame
 		Log.info("Init settings");
 		
 		setLanguage("giforg.title");
-		setPreferredSize(1000, 800);
+		setPreferredSize(900, 700);
 		setRound(4);
 		setShadeWidth(0);
 		setResizable(true);
@@ -222,22 +225,6 @@ public class GifOrganizerUI extends CustomWebFrame
 	{
 		libraryComboBox.setModel(libraryComboBoxModel = new CollectionComboBoxModel<>());
 		visibleImages = Collections.synchronizedSet(new HashSet<>());
-	}
-	
-	private void initSettings(Config config)
-	{
-		checkNewImagesMenuItem.setSelected(config.isCheckNewImages());
-		useNativeFrameMenuItem.setSelected(config.useNativeFrame());
-		
-		switch(config.getImageSize())
-		{
-			case SMALL: smallSizeMenuItem.setSelected(true);
-				break;
-			case NORMAL: normalSizeMenuItem.setSelected(true);
-				break;
-			case LARGE: largeSizeMenuItem.setSelected(true);
-				break;
-		}
 	}
 	
 	private void initListeners()
@@ -546,27 +533,10 @@ public class GifOrganizerUI extends CustomWebFrame
 		LMU.registerContainer(viewMenu, "view");
 		
 		//// Image size
-		WebMenu imageSizeMenu = new WebMenu("Image size");
+		imageSizeMenu = new WebMenu("Image size");
 		viewMenu.add(imageSizeMenu);
 		imageSizeMenu.setLanguage("imagesize");
 		LMU.registerContainer(imageSizeMenu, "imagesize");
-		
-		ButtonGroup sizeButtonGroup = new ButtonGroup();
-		
-		smallSizeMenuItem = new WebRadioButtonMenuItem("Small");
-		imageSizeMenu.add(smallSizeMenuItem);
-		sizeButtonGroup.add(smallSizeMenuItem);
-		smallSizeMenuItem.setLanguage("small");
-		
-		normalSizeMenuItem = new WebRadioButtonMenuItem("Normal");
-		imageSizeMenu.add(normalSizeMenuItem);
-		sizeButtonGroup.add(normalSizeMenuItem);
-		normalSizeMenuItem.setLanguage("normal");
-		
-		largeSizeMenuItem = new WebRadioButtonMenuItem("Large");
-		imageSizeMenu.add(largeSizeMenuItem);
-		sizeButtonGroup.add(largeSizeMenuItem);
-		largeSizeMenuItem.setLanguage("large");
 		
 		viewMenu.addSeparator();
 		
@@ -592,12 +562,9 @@ public class GifOrganizerUI extends CustomWebFrame
 		checkNewImagesMenuItem.setLanguage("checknewimages");
 		
 		//// Upload services
-		WebMenu uploadServiceMenu = new WebMenu("Upload services");
-		uploadServiceMenu.setEnabled(false);
+		uploadServiceMenu = new WebMenu("Upload services");
 		settingsMenu.add(uploadServiceMenu);
 		uploadServiceMenu.setLanguage("uploadservice");
-		
-		//TODO: fill upload services menu
 		
 		settingsMenu.addSeparator();
 		
@@ -606,24 +573,9 @@ public class GifOrganizerUI extends CustomWebFrame
 		useNativeFrameMenuItem.setLanguage("nativeframe");
 		
 		//// Languages
-		WebMenu languageMenu = new WebMenu("Language");
+		languageMenu = new WebMenu("Language");
 		settingsMenu.add(languageMenu);
 		languageMenu.setLanguage("language");
-		
-		languageMenuItems = new ArrayList<>();
-		ButtonGroup languageButtonGroup = new ButtonGroup();
-		for(String lang : LanguageManager.getSupportedLanguages())
-		{
-			WebRadioButtonMenuItem langItem = new WebRadioButtonMenuItem(lang);
-			langItem.setName(lang);
-			langItem.setIcon(LanguageManager.getLanguageIcon(lang));
-			if(lang.equals(LanguageManager.getLanguage()))
-				langItem.setSelected(true);
-			
-			languageMenuItems.add(langItem);
-			languageMenu.add(langItem);
-			languageButtonGroup.add(langItem);
-		}
 		
 		// About
 		
@@ -657,6 +609,77 @@ public class GifOrganizerUI extends CustomWebFrame
 		aboutMenu.add(iconsMenuItem);
 	}
 	
+	private void initMenuBarDynamic()
+	{
+		// Image sizes
+		sizeMenuItems = new ArrayList<>();
+		ButtonGroup sizeButtonGroup = new ButtonGroup();
+		
+		for(ItemSize size : ItemSize.values())
+		{
+			WebRadioButtonMenuItem sizeMenuItem = new WebRadioButtonMenuItem(size.getName());
+			sizeMenuItem.setName(size.toString());
+			
+			sizeMenuItems.add(sizeMenuItem);
+			imageSizeMenu.add(sizeMenuItem);
+			sizeButtonGroup.add(sizeMenuItem);
+			sizeMenuItem.setLanguage(size.toString().toLowerCase());
+		}
+		
+		// Upload services
+		uploadServiceMenuItems = new HashMap<>();
+		
+		for(String ext : ImageLoaders.getSupportedExtensions())
+		{
+			String extMenuName = "ext_"+ext;
+			List<WebRadioButtonMenuItem> extItems = new ArrayList<>(4);
+			
+			WebMenu extMenu = new WebMenu(ext);
+			extMenu.setName(extMenuName);
+			uploadServiceMenu.add(extMenu);
+			uploadServiceMenuItems.put(extMenuName, extItems);
+			
+			List<Service> services = ServiceManager.getSupportedServices(ext);
+			Collections.sort(services);
+			
+			// No services :(
+			if(services.size() == 0)
+			{
+				WebMenuItem o_o = new WebMenuItem(LM.get("giforg.menu.settings.noservices"));
+				o_o.setEnabled(false);
+				extMenu.add(o_o);
+				continue;
+			}
+			
+			// Add all services to list
+			ButtonGroup extButtonGroup = new ButtonGroup();
+			for(Service service : services)
+			{
+				WebRadioButtonMenuItem item = new WebRadioButtonMenuItem(service.getName());
+				item.setName(extMenuName+"_"+service.getId().toLowerCase());
+				
+				extMenu.add(item);
+				extButtonGroup.add(item);
+				extItems.add(item);
+			}
+		}
+		
+		// Languages
+		languageMenuItems = new ArrayList<>();
+		ButtonGroup languageButtonGroup = new ButtonGroup();
+		
+		for(String lang : LanguageManager.getSupportedLanguages())
+		{
+			WebRadioButtonMenuItem langItem = new WebRadioButtonMenuItem(lang);
+			langItem.setName("lang_"+lang);
+			langItem.setIcon(LanguageManager.getLanguageIcon(lang));
+			
+			languageMenuItems.add(langItem);
+			languageMenu.add(langItem);
+			languageButtonGroup.add(langItem);
+		}
+	}
+	
 	private void initMenuBarListeners()
 	{
 		// Library menu
@@ -677,10 +700,6 @@ public class GifOrganizerUI extends CustomWebFrame
 		
 		// View menu
 		
-		smallSizeMenuItem.addItemListener(evt -> ui_setImageSize(evt, ItemSize.SMALL));
-		normalSizeMenuItem.addItemListener(evt -> ui_setImageSize(evt, ItemSize.NORMAL));
-		largeSizeMenuItem.addItemListener(evt -> ui_setImageSize(evt, ItemSize.LARGE));
-		
 		showStarredMenuItem.addItemListener(evt -> ui_setSearchFavorites(isSelected(evt)));
 		
 		showUntaggedMenuItem.addItemListener(evt -> ui_setSearchUntagged(isSelected(evt)));
@@ -690,14 +709,6 @@ public class GifOrganizerUI extends CustomWebFrame
 		checkNewImagesMenuItem.addItemListener(evt -> controller.setCheckNewImages(isSelected(evt)));
 		
 		useNativeFrameMenuItem.addItemListener(evt -> controller.setUseNativeFrame(isSelected(evt)));
-		
-		for(WebRadioButtonMenuItem item : languageMenuItems)
-		{
-			item.addItemListener((evt) -> {
-				if(isSelected(evt))
-					controller.setLanguage(item.getName());
-			});
-		}
 		
 		// About menu
 		
@@ -712,10 +723,78 @@ public class GifOrganizerUI extends CustomWebFrame
 		iconsMenuItem.addActionListener(evt -> ui_iconsWebsite());
 	}
 	
+	private void initMenuBarDynamicListeners()
+	{
+		// Image sizes
+		for(WebRadioButtonMenuItem item : sizeMenuItems)
+		{
+			item.addItemListener(evt -> {
+				if(isSelected(evt))
+					ui_setImageSize(ItemSize.valueOf(item.getName()));
+			});
+		}
+		
+		// Upload services
+		for(String extKey : uploadServiceMenuItems.keySet())
+		{
+			for(WebRadioButtonMenuItem extItem : uploadServiceMenuItems.get(extKey))
+			{
+				extItem.addItemListener(evt -> {
+					if(isSelected(evt))
+						ui_setUploadPreferred(extKey, extItem.getName());
+				});
+			}
+		}
+		
+		// Languages
+		for(WebRadioButtonMenuItem item : languageMenuItems)
+		{
+			item.addItemListener((evt) -> {
+				if(isSelected(evt))
+					controller.setLanguage(item.getName());
+			});
+		}
+	}
+	
+	private void initSettings(Config config)
+	{
+		checkNewImagesMenuItem.setSelected(config.isCheckNewImages());
+		useNativeFrameMenuItem.setSelected(config.useNativeFrame());
+		
+		// Image size
+		String size = config.getImageSize().toString();
+		for(WebRadioButtonMenuItem b : sizeMenuItems)
+		{
+			if(b.getName().equals(size))
+				b.setSelected(true);
+		}
+		
+		// Upload services
+		for(String extKey : uploadServiceMenuItems.keySet())
+		{
+			String ext = extKey.substring(extKey.lastIndexOf('_')+1);
+			String pref = config.getPreferredService(ext);
+			if(pref != null)
+			{
+				for(WebRadioButtonMenuItem extItem : uploadServiceMenuItems.get(extKey))
+				{
+					String svcKey = extItem.getName();
+					String svc = svcKey.substring(svcKey.lastIndexOf('_')+1);
+					if(pref.equalsIgnoreCase(svc))
+						extItem.setSelected(true);
+				}
+			}
+		}
+		
+		// Language
+		for(WebRadioButtonMenuItem langItem : languageMenuItems)
+			if(langItem.getName().equals("lang_"+LanguageManager.getLanguage()))
+				langItem.setSelected(true);
+	}
+	
 	private void initFinish()
 	{
-		pack();
-		center();
+		//pack();
 	}
 	
 	// UI action methods
@@ -845,10 +924,9 @@ public class GifOrganizerUI extends CustomWebFrame
 		IOUtil.openWebsite("http://p.yusukekamiyamane.com/");
 	}
 	
-	private void ui_setImageSize(ItemEvent evt, ItemSize size)
+	private void ui_setImageSize(ItemSize size)
 	{
-		if(isSelected(evt))
-			controller.setImageSize(size);
+		controller.setImageSize(size);
 	}
 	
 	private void ui_setSearchFavorites(boolean selected)
@@ -867,6 +945,13 @@ public class GifOrganizerUI extends CustomWebFrame
 	private void ui_setSearchUntagged(boolean selected)
 	{
 		controller.setSearchUntagged(selected);
+	}
+	
+	private void ui_setUploadPreferred(String extKey, String svcKey)
+	{
+		String ext = extKey.substring(extKey.lastIndexOf('_')+1);
+		String svc = svcKey.substring(svcKey.lastIndexOf('_')+1);
+		controller.setExtensionService(ext, svc);
 	}
 	
 	// Receive from controller
@@ -1312,7 +1397,8 @@ public class GifOrganizerUI extends CustomWebFrame
 					@Override
 					public String getDescription()
 					{
-						Set<String> types = ImageLoaders.getSupportedImageTypes();
+						List<String> types = ImageLoaders.getSupportedTypes();
+						Collections.sort(types);
 						StringBuilder s = new StringBuilder("Animated images (");
 						s.append(types.stream().sorted().collect(Collectors.joining(", ")));
 						s.append(')');

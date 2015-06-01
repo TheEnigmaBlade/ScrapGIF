@@ -12,7 +12,7 @@ public class Imgur extends Service
 	public Imgur()
 	{
 		super("imgur", "Imgur", "https://api.imgur.com/3/image", null);
-		setFileTypes("gif", "gifv");
+		setFileExtensions("gif", "gifv");
 		setMaxFileSize(IOUtil.megabytesToBytes(50));
 	}
 	

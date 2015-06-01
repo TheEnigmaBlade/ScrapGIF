@@ -79,6 +79,9 @@
 			<record key="uploadservice" mnemonic="u">
 				<value lang="en">Upload service</value>
 			</record>
+			<record key="noservices">
+				<value lang="en">None</value>
+			</record>
 			<record key="nativeframe" mnemonic="w">
 				<value lang="en">Use system window (requires restart)</value>
 			</record>

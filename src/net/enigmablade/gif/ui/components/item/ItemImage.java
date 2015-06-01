@@ -421,7 +421,7 @@ public class ItemImage extends CustomWebOverlay
 	
 	public static void startAnimator(Animator animator)
 	{
-		Thread animatorThread = new Thread(animator);
+		Thread animatorThread = new Thread(animator, "Image animator");
 		animatorThread.setDaemon(true);
 		animatorThread.start();
 	}

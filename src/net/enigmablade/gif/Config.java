@@ -75,6 +75,16 @@ public class Config extends Properties
 		return containsKey("window_width") && containsKey("window_height");
 	}
 	
+	public synchronized int getWindowX()
+	{
+		return getIntProperty("window_x", Integer.MIN_VALUE);
+	}
+	
+	public synchronized int getWindowY()
+	{
+		return getIntProperty("window_y", Integer.MIN_VALUE);
+	}
+	
 	public synchronized int getWindowWidth()
 	{
 		return getIntProperty("window_width", -1);
@@ -85,8 +95,10 @@ public class Config extends Properties
 		return getIntProperty("window_height", -1);
 	}
 	
-	public synchronized void setWindowSize(int width, int height)
+	public synchronized void setWindowInfo(int x, int y, int width, int height)
 	{
+		setProperty("window_x", String.valueOf(x), false);
+		setProperty("window_y", String.valueOf(y), false);
 		setProperty("window_width", String.valueOf(width), false);
 		setProperty("window_height", String.valueOf(height), true);
 	}
@@ -151,14 +163,14 @@ public class Config extends Properties
 		setProperty("recent_tags", tags);
 	}
 	
-	public synchronized List<String> getPreferredServices()
+	public synchronized String getPreferredService(String extension)
 	{
-		return Arrays.asList(getProperty("pref_service", "").split(";"));
+		return getProperty("pref_service_"+extension.toLowerCase(), null);
 	}
 	
-	public synchronized void setPreferredServices(Set<String> services)
+	public synchronized void setPreferredServices(String extension, String service)
 	{
-		setProperty("pref_service", services.stream().collect(Collectors.joining(";")));
+		setProperty("pref_service_"+extension.toLowerCase(), service);
 	}
 	
 	public synchronized boolean isCheckNewImages()

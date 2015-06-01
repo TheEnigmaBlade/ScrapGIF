@@ -67,6 +67,8 @@ public interface UIController
 	
 	public void setCheckNewImages(boolean check);
 	
+	public void setExtensionService(String extension, String service);
+	
 	public void setUseNativeFrame(boolean use);
 	
 	public void setLanguage(String language);

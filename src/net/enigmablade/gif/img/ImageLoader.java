@@ -7,7 +7,7 @@ public abstract class ImageLoader
 {
 	public static final FilenameFilter IMAGE_FILTER = (File dir, String name) -> {
 		String ext = name.substring(name.lastIndexOf('.')+1).toLowerCase();
-		return ImageLoaders.supportsImageType(ext);
+		return ImageLoaders.supportsImageExtension(ext);
 	};
 	
 	public static final FileFilter IMAGE_FILE_FILTER = (File file) -> {
@@ -16,11 +16,15 @@ public abstract class ImageLoader
 	
 	//Loader stuff
 	
+	private String typeName;
 	private List<String> fileTypes;
 	
-	public ImageLoader(String... fileTypes)
+	public ImageLoader(String typeName, String... fileExt)
 	{
-		this.fileTypes = Arrays.asList(fileTypes);
+		this.typeName = typeName;
+		if(fileExt.length == 0)
+			throw new IllegalArgumentException("File extensions need to be given");
+		this.fileTypes = Arrays.asList(fileExt);
 	}
 	
 	public ImageFrame[] loadImage(File file)
@@ -39,6 +43,11 @@ public abstract class ImageLoader
 	protected abstract ImageFrame[] loadImage(File file, boolean onlyFirstFrame);
 	
 	// Accessors
+	
+	public String getTypeName()
+	{
+		return typeName;
+	}
 	
 	public List<String> getFileTypes()
 	{

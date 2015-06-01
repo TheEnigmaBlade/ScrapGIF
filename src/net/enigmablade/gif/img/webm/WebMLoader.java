@@ -23,7 +23,7 @@ public class WebMLoader extends ImageLoader implements IMediaListener
 	
 	public WebMLoader()
 	{
-		super("webm");
+		super("WebM", "webm");
 	}
 	
 	@Override

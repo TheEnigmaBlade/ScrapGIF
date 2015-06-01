@@ -14,7 +14,7 @@ public class GifLoader extends ImageLoader
 {
 	public GifLoader()
 	{
-		super("gif");
+		super("GIF", "gif");
 	}
 	
 	@Override
@@ -117,24 +117,26 @@ public class GifLoader extends ImageLoader
 				if(master == null)
 				{
 					master = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-					master.createGraphics().setColor(backgroundColor);
-					master.createGraphics().fillRect(0, 0, master.getWidth(), master.getHeight());
-					
 					hasBackround = image.getWidth() == width && image.getHeight() == height;
 					
-					master.createGraphics().drawImage(image, 0, 0, null);
+					Graphics2D g2 = master.createGraphics();
+					g2.setColor(backgroundColor);
+					g2.fillRect(0, 0, master.getWidth(), master.getHeight());
+					g2.drawImage(image, 0, 0, null);
+					g2.dispose();
 				}
 				else
 				{
 					int x = 0;
 					int y = 0;
 					
-					for (int nodeIndex = 0; nodeIndex < children.getLength(); nodeIndex++){
+					for(int nodeIndex = 0; nodeIndex < children.getLength(); nodeIndex++)
+					{
 						Node nodeItem = children.item(nodeIndex);
 						
-						if (nodeItem.getNodeName().equals("ImageDescriptor")){
+						if(nodeItem.getNodeName().equals("ImageDescriptor"))
+						{
 							NamedNodeMap map = nodeItem.getAttributes();
-							
 							x = Integer.valueOf(map.getNamedItem("imageLeftPosition").getNodeValue());
 							y = Integer.valueOf(map.getNamedItem("imageTopPosition").getNodeValue());
 						}
@@ -155,16 +157,23 @@ public class GifLoader extends ImageLoader
 						ColorModel model = from.getColorModel();
 						boolean alpha = from.isAlphaPremultiplied();
 						WritableRaster raster = from.copyData(null);
+						
+						master.flush();
 						master = new BufferedImage(model, raster, alpha, null);
 					}
 					else if(disposal.equals("restoreToBackgroundColor") && backgroundColor != null)
 					{
 						if(!hasBackround || frameIndex > 1)
 						{
-							master.createGraphics().fillRect(lastx, lasty, frames.get(frameIndex - 1).getWidth(), frames.get(frameIndex - 1).getHeight());
+							Graphics2D g2 = master.createGraphics();
+							g2.fillRect(lastx, lasty, frames.get(frameIndex - 1).getWidth(), frames.get(frameIndex - 1).getHeight());
+							g2.dispose();
 						}
 					}
-					master.createGraphics().drawImage(image, x, y, null);
+					
+					Graphics2D g2 = master.createGraphics();
+					g2.drawImage(image, x, y, null);
+					g2.dispose();
 					
 					lastx = x;
 					lasty = y;
@@ -176,6 +185,7 @@ public class GifLoader extends ImageLoader
 				BufferedImage copy = new BufferedImage(model, raster, alpha, null);
 				frames.add(new ImageFrame(copy, delay, disposal));
 				
+				image.flush();
 				master.flush();
 			}
 			
