@@ -88,6 +88,11 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 			else
 				view.setLocation(x, y);
 		}
+		else
+		{
+			view.setSize(900, 700);
+			view.center();
+		}
 	}
 	
 	public void start()

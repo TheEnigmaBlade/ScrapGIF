@@ -2,8 +2,8 @@
 
 ## Changes
 
-- Added drop shadow to images
 - Added configurable preferred upload service per extension
+- Added drop shadow to images
 - Added saving of window position
 - Fixed possible memory leaks
 

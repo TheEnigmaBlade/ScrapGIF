@@ -68,7 +68,7 @@ public class SettingsLoader
 		File file = setupWrite(name+".properties");
 		try(Writer out = new FileWriter(file))
 		{
-			properties.store(out, "GIF Organizer configuration file");
+			properties.store(out, "ScrapGIF configuration file");
 			return true;
 		}
 		catch(IOException e)
