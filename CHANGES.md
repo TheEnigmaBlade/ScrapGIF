@@ -5,6 +5,9 @@
 - Added configurable preferred upload service per extension
 - Added drop shadow to images
 - Added saving of window position
+
+## Fixes
+
 - Fixed possible memory leaks
 
 # Version 0.5

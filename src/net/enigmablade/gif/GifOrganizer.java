@@ -325,6 +325,7 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 			}
 			else
 			{
+				Log.debug("Upload service found, executing service upload");
 				service.upload(currentLibrary.getImagePath(image).toFile(), image, this::uploadImageCallback, this::uploadProgressCallback);
 			}
 		}
@@ -348,17 +349,29 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 		// Upload successful
 		if(error == ServiceError.NONE)
 		{
-			image.addLink(link);
-			view.refreshImageMenu();
-			
+			Log.info("Creating service URL");
 			String url = copyImageLink(link);
+			// Success
 			if(url != null)
+			{
+				Log.info("Upload success");
+				Log.info("  URL="+url);
+				image.addLink(link);
+				saveLibrary();
+				view.refreshImageMenu();
 				view.notifyUpload(ServiceError.NONE, config.isSoundEffectsEnabled(), () -> IOUtil.openWebsite(url));
+			}
 			else
+			{
+				Log.error("Failed to create URL, no compatible service (this is bad)");
+				Log.error("  link_id="+link.getFile());
+				Log.error("  link_service="+link.getService());
 				view.notifyUpload(ServiceError.NO_SERVICE, config.isSoundEffectsEnabled(), null);
+			}
 		}
 		else
 		{
+			Log.error("Upload failed: "+error);
 			view.notifyUpload(error, config.isSoundEffectsEnabled(), null);
 		}
 	}
@@ -968,7 +981,7 @@ public class GifOrganizer implements UIController, FileSystemAccessor
 		String url = ServiceManager.createUrl(link);
 		if(url == null)
 		{
-			Log.error("Can't copy shit if there's nothing to copy!");
+			Log.error("Can't copy if there's nothing to copy!");
 			return null;
 		}
 		

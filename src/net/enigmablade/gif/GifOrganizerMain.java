@@ -35,7 +35,7 @@ public class GifOrganizerMain
 		Log.initialize();
 		
 		System.setProperty("org.slf4j.simpleLogger.logFile", console ? "System.out" : "lastrun.log");
-		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "info");
+		System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", console ? "debug" : "info");
 		System.setProperty("org.slf4j.simpleLogger.showLogName", "true");
 		System.setProperty("org.slf4j.simpleLogger.showShortLogName", "true");
 		System.setProperty("org.slf4j.simpleLogger.levelInBrackets", "true");
